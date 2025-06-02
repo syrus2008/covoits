@@ -573,7 +573,7 @@ async def add_festival(request: Request):
         json.dump(festivals, f, ensure_ascii=False, indent=4)
     return {"message": "Festival ajouté avec succès"}
 
-("/api/tra@app.getjets/{festival_id}")
+@app.get("/api/trajets/{festival_id}")
 async def get_trajets(festival_id: str):
     try:
         # Convertir festival_id en entier si c'est une chaîne de caractères
