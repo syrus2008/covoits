@@ -571,7 +571,7 @@ async function loadTrajets(festival_id) {
                             <input type="password" id="secret-input-${trajet.id}" class="form-control form-control-sm" placeholder="Mot-clé secret" style="margin-bottom: 5px;">
                             <div class="d-flex gap-2">
                                 <button class="btn btn-sm btn-primary confirm-btn" 
-        onclick="confirmMarkComplet(${festival_id}, '${trajet.id}')">
+        onclick="window.confirmMarkComplet(${festival_id}, '${trajet.id}')">
     <i class="fas fa-check-double"></i> Confirmer
 </button>
                                 <button class="btn btn-sm btn-outline" onclick="event.preventDefault(); document.getElementById('secret-form-${trajet.id}').style.display = 'none';">
@@ -808,9 +808,12 @@ function showSecretForm(trajetId, action) {
 }
 
 // Fonction pour confirmer le marquage comme complet
-async function confirmMarkComplet(festivalId, trajetId) {
+window.confirmMarkComplet = async function(festivalId, trajetId) {
+    console.log('confirmMarkComplet appelé avec festivalId:', festivalId, 'et trajetId:', trajetId);
+    
     const secretInput = document.getElementById(`secret-input-${trajetId}`);
     if (!secretInput) {
+        console.error('Champ secret non trouvé pour le trajet:', trajetId);
         showNotification('Erreur: champ de mot de passe non trouvé', 'error');
         return;
     }
@@ -821,7 +824,17 @@ async function confirmMarkComplet(festivalId, trajetId) {
         return;
     }
     
+    // Afficher un indicateur de chargement
+    const confirmBtn = document.querySelector(`#secret-form-${trajetId} .confirm-btn`);
+    const originalBtnText = confirmBtn ? confirmBtn.innerHTML : '';
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
+    }
+    
     try {
+        console.log('Envoi de la requête pour marquer comme complet:', { trajetId, festivalId });
+        
         const response = await fetch(`/api/trajets/${festivalId}/complet`, {
             method: 'PUT',
             headers: { 
@@ -834,20 +847,35 @@ async function confirmMarkComplet(festivalId, trajetId) {
             })
         });
         
+        console.log('Réponse reçue:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erreur du serveur:', errorText);
+            throw new Error('Erreur lors de la communication avec le serveur');
+        }
+        
         const result = await response.json();
+        console.log('Résultat:', result);
         
         if (result.error) {
             throw new Error(result.error);
         }
         
-        showNotification('Trajet marqué comme complet avec succès', 'success');
+        showNotification(result.message || 'Trajet marqué comme complet avec succès', 'success');
         
-        // Recharger la liste des trajets
-        loadTrajets(festivalId);
+        // Recharger la liste des trajets après un court délai
+        setTimeout(() => loadTrajets(festivalId), 500);
         
     } catch (error) {
         console.error('Erreur lors du marquage comme complet:', error);
         showNotification(error.message || 'Une erreur est survenue lors du marquage comme complet', 'error');
+    } finally {
+        // Réactiver le bouton
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalBtnText;
+        }
     }
 }
 
