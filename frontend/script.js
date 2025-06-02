@@ -747,6 +747,110 @@ function showSecretForm(trajetId, action) {
     }
 }
 
+// Fonction pour afficher le formulaire de mot de passe secret
+function showSecretForm(trajetId, action) {
+    console.log('showSecretForm appelé avec trajetId:', trajetId, 'et action:', action);
+    
+    // Masquer tous les autres formulaires
+    document.querySelectorAll('.trajet-secret-form').forEach(form => {
+        form.style.display = 'none';
+    });
+    
+    // Afficher le formulaire correspondant à l'action
+    let formId = '';
+    
+    switch(action) {
+        case 'mark':
+            formId = `secret-form-${trajetId}`;
+            break;
+        case 'delete':
+            formId = `delete-form-${trajetId}`;
+            break;
+        case 'reopen':
+            formId = `reopen-form-${trajetId}`;
+            // Créer le formulaire de réouverture s'il n'existe pas
+            if (!document.getElementById(formId)) {
+                const form = document.createElement('div');
+                form.id = formId;
+                form.className = 'trajet-secret-form';
+                form.style.marginTop = '10px';
+                form.innerHTML = `
+                    <input type="password" id="reopen-secret-${trajetId}" class="form-control form-control-sm" placeholder="Mot-clé secret" style="margin-bottom: 5px;">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-success" 
+                                onclick="markAsAvailable('${trajetId}', ${window.currentFestivalId})">
+                            <i class="fas fa-redo"></i> Confirmer
+                        </button>
+                        <button class="btn btn-sm btn-outline" 
+                                onclick="event.preventDefault(); this.closest('.trajet-secret-form').style.display = 'none';">
+                            <i class="fas fa-times"></i> Annuler
+                        </button>
+                    </div>
+                `;
+                
+                // Trouver le bouton de réouverture et insérer le formulaire après
+                const reopenBtn = document.querySelector(`[onclick*="showSecretForm('${trajetId}', 'reopen')"]`);
+                if (reopenBtn && reopenBtn.parentNode) {
+                    reopenBtn.parentNode.insertBefore(form, reopenBtn.nextSibling);
+                }
+            }
+            break;
+    }
+    
+    const form = document.getElementById(formId);
+    if (form) {
+        form.style.display = 'block';
+        // Faire défendre jusqu'au formulaire
+        form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+        console.error('Formulaire non trouvé avec l\'ID:', formId);
+    }
+}
+
+// Fonction pour confirmer le marquage comme complet
+async function confirmMarkComplet(festivalId, trajetId) {
+    const secretInput = document.getElementById(`secret-input-${trajetId}`);
+    if (!secretInput) {
+        showNotification('Erreur: champ de mot de passe non trouvé', 'error');
+        return;
+    }
+    
+    const secret = secretInput.value.trim();
+    if (!secret) {
+        showNotification('Veuillez entrer le mot-clé secret', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/trajets/${festivalId}/complet`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true' 
+            },
+            body: JSON.stringify({ 
+                trajet_id: trajetId,
+                secret: secret
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        showNotification('Trajet marqué comme complet avec succès', 'success');
+        
+        // Recharger la liste des trajets
+        loadTrajets(festivalId);
+        
+    } catch (error) {
+        console.error('Erreur lors du marquage comme complet:', error);
+        showNotification(error.message || 'Une erreur est survenue lors du marquage comme complet', 'error');
+    }
+}
+
 // Fonction pour afficher le formulaire de modification des places
 function showUpdatePlacesForm(trajetId, currentPlaces, festivalId) {
     console.log('Appel de showUpdatePlacesForm avec trajetId:', trajetId, 'et places:', currentPlaces);
