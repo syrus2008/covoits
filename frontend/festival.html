@@ -348,54 +348,8 @@
             loadFestivalDetails();
             
             // Gestion de la soumission du formulaire
-            if (trajetForm) {
-                trajetForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    const submitButton = trajetForm.querySelector('button[type="submit"]');
-                    if (!submitButton) return;
-                    
-                    const originalButtonText = submitButton.innerHTML;
-                    
-                    try {
-                        // Désactiver le bouton pendant l'envoi
-                        submitButton.disabled = true;
-                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...';
-                        
-                        // Vérifier que la fonction addTrajet existe
-                        if (typeof addTrajet !== 'function') {
-                            throw new Error('Fonction addTrajet non disponible');
-                        }
-                        
-                        // Appeler la fonction addTrajet
-                        await addTrajet(festivalId);
-                        
-                        // Réinitialiser le formulaire après un ajout réussi
-                        trajetForm.reset();
-                        if (trajetFormContainer) trajetFormContainer.style.display = 'none';
-                        if (showTrajetFormBtn) showTrajetFormBtn.style.display = 'inline-flex';
-                        
-                        // Afficher une notification de succès
-                        showNotification('Votre trajet a été ajouté avec succès !', 'success');
-                        
-                        // Recharger les trajets
-                        if (typeof loadTrajets === 'function') {
-                            await loadTrajets(festivalId);
-                        }
-                        
-                    } catch (error) {
-                        console.error('Erreur lors de l\'ajout du trajet:', error);
-                        showNotification(
-                            error.message || 'Une erreur est survenue lors de l\'ajout du trajet. Veuillez réessayer.', 
-                            'error'
-                        );
-                    } finally {
-                        // Réactiver le bouton dans tous les cas
-                        submitButton.disabled = false;
-                        submitButton.innerHTML = originalButtonText;
-                    }
-                });
-            }
+            // La gestion du formulaire est maintenant gérée par la fonction setupTrajetForm dans script.js
+            // qui est appelée lors du chargement de la page
             
             // Gestion de la déconnexion WebSocket lors du déchargement de la page
             window.addEventListener('beforeunload', function() {
