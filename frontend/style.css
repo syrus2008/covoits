@@ -1081,6 +1081,81 @@ h1::after {
     transform: translateX(3px);
 }
 
+/* Styles pour le formulaire de contact */
+.contact-container {
+    max-width: 100%;
+    padding: 2rem;
+    margin: 0 auto;
+}
+
+.contact-form {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    max-width: 600px;
+    margin: 2rem auto;
+}
+
+.contact-form h2 {
+    color: #2c3e50;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.contact-form p {
+    color: #7f8c8d;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    border-color: #3498db;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.success-message {
+    text-align: center;
+    padding: 2rem;
+    background-color: #e8f5e9;
+    border-radius: 8px;
+    color: #2e7d32;
+}
+
+.success-message i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #4caf50;
+}
+
 /* Styles pour les cartes de trajet */
 .trajet-card {
     background-color: var(--card-bg);

@@ -1,15 +1,66 @@
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, EmailStr
+from dotenv import load_dotenv
 import json
 import os
 import asyncio
-from datetime import datetime
-from typing import List, Dict
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Union, Any
 import uuid
+from pathlib import Path
+import secrets
+
+# Charger les variables d'environnement
+load_dotenv()
+
+# Configuration de l'application
+APP_CONFIG = {
+    "app_name": os.getenv("APP_NAME", "Covoiturage Festival"),
+    "contact_email": os.getenv("CONTACT_EMAIL", "covoiturage.festival@gmail.com"),
+    "secret_key": os.getenv("SECRET_KEY", "changez_ceci_par_une_cle_secrete_longue_et_aleatoire"),
+    "algorithm": os.getenv("ALGORITHM", "HS256"),
+    "access_token_expire_minutes": int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30)),
+}
 
 app = FastAPI()
 
+# Configuration de l'email
+EMAIL_CONFIG = {
+    "sender_email": os.getenv("SMTP_USERNAME", "covoiturage.festival@gmail.com"),
+    "smtp_server": os.getenv("SMTP_SERVER", "smtp.gmail.com"),
+    "smtp_port": int(os.getenv("SMTP_PORT", 587)),
+    "smtp_username": os.getenv("SMTP_USERNAME", "covoiturage.festival@gmail.com"),
+    "smtp_password": os.getenv("SMTP_PASSWORD", ""),
+}
+
+# Configuration CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # À restreindre en production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Modèles Pydantic pour la validation des données
+class ContactRequest(BaseModel):
+    driverId: str
+    trajetId: str
+    name: str
+    email: str
+    message: Optional[str] = None
+
+class ContactResponse(BaseModel):
+    success: bool
+    message: str
+
+# Configuration des fichiers statiques
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 app.mount("/images", StaticFiles(directory="images"), name="images")
 
@@ -116,7 +167,128 @@ async def read_index():
     headers = {"ngrok-skip-browser-warning": "true"}
     return HTMLResponse(content=content, headers=headers)
 
-# Route WebSocket pour le chat
+# Fonction pour envoyer un email
+async def send_email(recipient_email: str, subject: str, body: str):
+    if not EMAIL_CONFIG["smtp_password"]:
+        # En développement, on peut juste logger l'email au lieu de l'envoyer
+        print(f"\n=== EMAIL NON ENVOYÉ (pas de mot de passe configuré) ===")
+        print(f"À: {recipient_email}")
+        print(f"Sujet: {subject}")
+        print(f"Corps:\n{body}\n")
+        return True
+        
+    try:
+        # Création du message
+        message = MIMEMultipart()
+        message["From"] = EMAIL_CONFIG["sender_email"]
+        message["To"] = recipient_email
+        message["Subject"] = subject
+        
+        # Corps du message
+        message.attach(MIMEText(body, "plain"))
+        
+        # Connexion au serveur SMTP et envoi de l'email
+        with smtplib.SMTP(EMAIL_CONFIG["smtp_server"], EMAIL_CONFIG["smtp_port"]) as server:
+            server.starttls()
+            server.login(EMAIL_CONFIG["smtp_username"], EMAIL_CONFIG["smtp_password"])
+            server.send_message(message)
+            
+        return True
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'email: {e}")
+        return False
+
+# Fonction pour charger les informations d'un trajet depuis le fichier JSON
+async def load_trajet(trajet_id: str) -> Optional[Dict]:
+    try:
+        with open(TRAJETS_FILE, 'r', encoding='utf-8') as f:
+            trajets = json.load(f)
+        
+        # Rechercher le trajet par ID
+        for trajet in trajets:
+            if str(trajet.get('id')) == str(trajet_id):
+                return trajet
+        return None
+    except Exception as e:
+        print(f"Erreur lors du chargement du trajet: {e}")
+        return None
+
+# Route pour la demande de contact
+@app.post("/api/contact-request", response_model=ContactResponse)
+async def contact_request(contact: ContactRequest):
+    try:
+        # Charger les informations du trajet
+        trajet = await load_trajet(contact.trajetId)
+        if not trajet:
+            raise HTTPException(status_code=404, detail="Trajet non trouvé")
+        
+        # Formater les informations du trajet
+        trajet_info = {
+            "id": trajet.get('id'),
+            "departure": trajet.get('depart', 'Ville de départ'),
+            "arrival": trajet.get('destination', 'Ville d\'arrivée'),
+            "date": trajet.get('date', 'Date non spécifiée'),
+            "places": trajet.get('places_disponibles', 1)
+        }
+        
+        # Ici, vous pourriez charger les informations du conducteur depuis une base de données utilisateurs
+        # Pour l'instant, nous utilisons des valeurs par défaut
+        driver_info = {
+            "id": contact.driverId,
+            "name": trajet.get('conducteur', 'Conducteur'),
+            "email": f"conducteur-{contact.driverId}@example.com",
+            "phone": trajet.get('telephone', 'Non renseigné')
+        }
+        
+        # Envoyer un email au conducteur
+        driver_subject = f"Nouvelle demande de covoiturage pour votre trajet"
+        driver_body = f"""
+        Bonjour {driver_info['name']},
+        
+        Vous avez reçu une nouvelle demande de covoiturage pour votre trajet du {trajet_info['date']} 
+        de {trajet_info['departure']} à {trajet_info['arrival']}.
+        
+        Détails du passager :
+        - Nom : {contact.name}
+        - Email : {contact.email}
+        - Message : {contact.message or 'Aucun message supplémentaire'}
+        
+        Si vous acceptez cette demande, vous pouvez contacter directement le passager à l'adresse email fournie.
+        
+        Cordialement,
+        L'équipe Covoiturage Festival
+        """
+        
+        await send_email(driver_info["email"], driver_subject, driver_body)
+        
+        # Envoyer un accusé de réception au demandeur
+        requester_subject = "Votre demande de covoiturage a été envoyée"
+        requester_body = f"""
+        Bonjour {contact.name},
+        
+        Votre demande de covoiturage pour le trajet du {trajet_info['date']} 
+        de {trajet_info['departure']} à {trajet_info['arrival']} a bien été transmise au conducteur.
+        
+        Le conducteur a été notifié et vous contactera directement par email s'il accepte votre demande.
+        
+        Coordonnées du conducteur (uniquement si accepté) :
+        - Nom : {driver_info['name']}
+        - Téléphone : {driver_info['phone']}
+        
+        Merci d'utiliser notre service de covoiturage !
+        
+        Cordialement,
+        L'équipe Covoiturage Festival
+        """
+        
+        await send_email(contact.email, requester_subject, requester_body)
+        
+        return {"success": True, "message": "Votre demande a été envoyée avec succès"}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Route WebSocket pour le chat"
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     # Recevoir le nom d'utilisateur lors de la connexion
@@ -172,6 +344,27 @@ async def websocket_endpoint(websocket: WebSocket):
 async def get_festivals():
     with open(FESTIVALS_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
+
+@app.get("/add-festival")
+async def add_festival_page():
+    return FileResponse("frontend/add_festival.html")
+
+@app.get("/contact")
+async def contact_form(driver_id: str, trajet_id: str):
+    return FileResponse("frontend/contact_form.html")
+
+# Configuration pour servir les fichiers statiques supplémentaires
+app.mount("/contact.js", StaticFiles(directory="frontend"), name="contact_js")
+
+# Route pour servir le fichier contact_form.html
+@app.get("/contact_form.html")
+async def serve_contact_form():
+    return FileResponse("frontend/contact_form.html")
+
+# Route pour servir le fichier contact.js
+@app.get("/contact.js")
+async def serve_contact_js():
+    return FileResponse("frontend/contact.js")
 
 @app.post("/api/festivals")
 async def add_festival(request: Request):

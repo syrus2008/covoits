@@ -1,6 +1,12 @@
 // Variables globales
 let currentFestivalId = null;
 
+// Fonction pour ouvrir le formulaire de contact
+function openContactForm(driverId, trajetId) {
+    const url = `/contact?driverId=${encodeURIComponent(driverId)}&trajetId=${encodeURIComponent(trajetId)}`;
+    window.open(url, '_blank', 'width=600,height=700');
+}
+
 // Fonction pour afficher un message de chargement
 function showLoading(container, message = 'Chargement en cours...') {
     if (!container) return;
@@ -421,8 +427,7 @@ async function loadTrajets(festival_id) {
                             </div>
                             
                             <div class="trajet-actions">
-                                <button class="btn btn-sm btn-outline" 
-                                        onclick="contacterConducteur('${trajet.contact || ''}')">
+                                <button class="btn btn-sm btn-primary" onclick="openContactForm('${trajet.conducteur_id || 'unknown'}', '${trajet.id}')">
                                     <i class="fas fa-envelope"></i> Contacter
                                 </button>
                                 <button class="btn btn-sm ${isComplet ? 'btn-outline' : 'btn-primary'}" 
