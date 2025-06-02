@@ -303,6 +303,22 @@ def get_places_restantes(trajet_id: str) -> tuple[int, bool]:
         print(f"Erreur lors du calcul des places restantes: {str(e)}")
         return 0, True
 
+@app.get("/api/places-disponibles/{trajet_id}")
+async def get_places_disponibles(trajet_id: str):
+    """
+    Retourne le nombre de places disponibles pour un trajet donné.
+    """
+    try:
+        places_restantes, est_complet = get_places_restantes(trajet_id)
+        return {
+            "trajet_id": trajet_id,
+            "places_restantes": places_restantes,
+            "est_complet": est_complet
+        }
+    except Exception as e:
+        print(f"Erreur lors de la récupération des places disponibles: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur lors de la récupération des places disponibles")
+
 # Route pour la demande de contact
 @app.post("/api/contact-request", response_model=ContactResponse)
 async def contact_request(contact: ContactRequest):
@@ -418,39 +434,39 @@ async def contact_request(contact: ContactRequest):
                 detail="Une erreur est survenue lors de l'enregistrement de votre demande"
             )
         
-        # Mettre à jour le nombre de places disponibles
+        # Mettre à jour le nombre de places disponibles dans le trajet
         try:
-            with open('backend/data/trajets.json', 'r+', encoding='utf-8') as f:
+            # Lire le fichier des trajets
+            with open('backend/data/trajets.json', 'r', encoding='utf-8') as f:
                 trajets = json.load(f)
-                trajet_trouve = False
-                
-                for t in trajets:
-                    if str(t.get('id')) == contact.trajetId:
-                        # Mettre à jour le nombre de places disponibles
-                        places_actuelles = int(t.get('places_disponibles', 0))
-                        nouvelles_places = max(0, places_actuelles - contact.places_demandees)
-                        t['places_disponibles'] = nouvelles_places
-                        
-                        # Mettre à jour le statut si nécessaire
-                        if nouvelles_places <= 0:
-                            t['statut'] = 'complet'
-                        
-                        trajet_trouve = True
-                        break
-                
-                if trajet_trouve:
-                    f.seek(0)
+            
+            # Trouver et mettre à jour le trajet
+            trajet_trouve = False
+            for t in trajets:
+                if str(t.get('id')) == contact.trajetId:
+                    # Mettre à jour le nombre de places disponibles
+                    places_actuelles = int(t.get('places_disponibles', 0))
+                    nouvelles_places = max(0, places_actuelles - contact.places_demandees)
+                    t['places_disponibles'] = nouvelles_places
+                    
+                    # Mettre à jour le statut si nécessaire
+                    if nouvelles_places <= 0:
+                        t['statut'] = 'complet'
+                    
+                    trajet_trouve = True
+                    break
+            
+            # Écrire les modifications dans le fichier
+            if trajet_trouve:
+                with open('backend/data/trajets.json', 'w', encoding='utf-8') as f:
                     json.dump(trajets, f, ensure_ascii=False, indent=2)
-                    f.truncate()
-                else:
-                    print(f"Avertissement: Trajet {contact.trajetId} non trouvé pour la mise à jour des places")
+                print(f"Mise à jour du trajet {contact.trajetId}: {places_actuelles} -> {nouvelles_places} places")
+            else:
+                print(f"Avertissement: Trajet {contact.trajetId} non trouvé pour la mise à jour des places")
                     
         except Exception as e:
             print(f"Erreur lors de la mise à jour des places disponibles: {str(e)}")
             # Ne pas échouer la requête à cause de cette erreur, juste la logger
-        
-        # Envoyer les emails
-        email_sent = True
         
         # Mettre à jour le contexte avec les places restantes
         driver_context['places_restantes'] = max(0, places_restantes - contact.places_demandees)
@@ -460,24 +476,44 @@ async def contact_request(contact: ContactRequest):
         driver_email_html = await load_email_template('driver_notification', driver_context)
         passenger_email_html = await load_email_template('passenger_confirmation', passenger_context)
         
-        # Email au conducteur
-        email_sent = False
-        if trajet.get('contact_email'):
-            email_sent = await send_email(
-                recipient_email=trajet['contact_email'],
-                subject=f"[Covoiturage Festival] Nouvelle demande pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !",
-                body=driver_email_html,
-                is_html=True
-            )
+        # Envoyer les emails
+        email_sent = True
         
-        # Email de confirmation au passager
-        if email_sent or not trajet.get('contact_email'):
-            email_sent = await send_email(
+        # Email au conducteur
+        driver_email_sent = False
+        if trajet.get('contact_email'):
+            try:
+                driver_email_sent = await send_email(
+                    recipient_email=trajet['contact_email'],
+                    subject=f"[Covoiturage Festival] Nouvelle demande pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !",
+                    body=driver_email_html,
+                    is_html=True
+                )
+                if driver_email_sent:
+                    print(f"Email de notification envoyé au conducteur: {trajet['contact_email']}")
+                else:
+                    print(f"Échec de l'envoi de l'email au conducteur: {trajet['contact_email']}")
+            except Exception as e:
+                print(f"Erreur lors de l'envoi de l'email au conducteur: {str(e)}")
+        else:
+            print("Aucune adresse email de conducteur trouvée pour l'envoi de la notification")
+        
+        # Email de confirmation au passager (toujours envoyé)
+        try:
+            passenger_email_sent = await send_email(
                 recipient_email=contact.email,
                 subject=f"[Covoiturage Festival] Confirmation de votre demande ({contact.places_demandees} place(s))",
                 body=passenger_email_html,
                 is_html=True
             )
+            if passenger_email_sent:
+                print(f"Email de confirmation envoyé au passager: {contact.email}")
+            else:
+                print(f"Échec de l'envoi de l'email de confirmation au passager: {contact.email}")
+                email_sent = False
+        except Exception as e:
+            print(f"Erreur lors de l'envoi de l'email de confirmation au passager: {str(e)}")
+            email_sent = False
         
         if not email_sent:
             raise HTTPException(status_code=500, detail="Erreur lors de l'envoi des emails")

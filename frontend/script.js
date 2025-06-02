@@ -13,9 +13,17 @@ async function openContactModal(driverId, trajetId) {
         const response = await fetch(`/api/trajets`);
         if (response.ok) {
             const trajets = await response.json();
-            const trajet = trajets.find(t => t.id === trajetId);
+            const trajet = trajets.find(t => t.id == trajetId); // Utilisation de == au lieu de === pour la comparaison
             if (trajet) {
-                placesDisponibles = trajet.places_disponibles || 1;
+                // Récupérer les places disponibles depuis l'API
+                const placesResponse = await fetch(`/api/places-disponibles/${trajetId}`);
+                if (placesResponse.ok) {
+                    const data = await placesResponse.json();
+                    placesDisponibles = data.places_restantes || 1;
+                } else {
+                    // En cas d'erreur, utiliser la valeur du trajet
+                    placesDisponibles = parseInt(trajet.places_disponibles) || 1;
+                }
             }
         }
     } catch (error) {
