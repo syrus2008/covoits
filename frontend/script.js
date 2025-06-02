@@ -230,19 +230,45 @@ async function loadFestivals() {
         
         // Afficher les festivals à venir
         if (upcomingFestivals.length > 0) {
+            console.log(`Affichage de ${upcomingFestivals.length} festivals à venir`);
+            
+            // Créer la section
             const upcomingSection = document.createElement('section');
             upcomingSection.className = 'festivals-section';
-            upcomingSection.innerHTML = '<h2><i class="fas fa-calendar-alt"></i> Festivals à venir</h2>';
             
+            // Créer le titre de la section
+            const title = document.createElement('h2');
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-calendar-alt';
+            title.appendChild(icon);
+            title.appendChild(document.createTextNode(' Festivals à venir'));
+            
+            // Créer la grille
             const upcomingGrid = document.createElement('div');
             upcomingGrid.className = 'festivals-grid';
             
+            // Ajouter les cartes à la grille
             upcomingFestivals.forEach((festival, index) => {
-                upcomingGrid.appendChild(createFestivalCard(festival, index));
+                const card = createFestivalCard(festival, index);
+                if (card) {
+                    upcomingGrid.appendChild(card);
+                }
             });
             
+            // Assembler la section
+            upcomingSection.appendChild(title);
             upcomingSection.appendChild(upcomingGrid);
+            
+            // Vider le conteneur avant d'ajouter la nouvelle section
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            
+            // Ajouter la section au conteneur
             container.appendChild(upcomingSection);
+            
+            // Forcer un recalcul du style pour s'assurer que le layout est mis à jour
+            void container.offsetHeight;
         }
         
         // Afficher les festivals passés (si demandé)

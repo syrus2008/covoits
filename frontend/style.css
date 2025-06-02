@@ -36,6 +36,51 @@
     margin-right: auto;
 }
 
+/* Styles pour la section des festivals en vedette */
+.featured-festivals {
+    width: 100%;
+    padding: 4rem 0;
+    background-color: #f8f9fa;
+    box-sizing: border-box;
+}
+
+.featured-festivals .container {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Styles pour le titre et le sous-titre */
+.featured-festivals .section-title {
+    text-align: center;
+    margin-bottom: 1rem;
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+.featured-festivals .section-subtitle {
+    text-align: center;
+    color: var(--text-light);
+    font-size: 1.2rem;
+    margin-bottom: 3rem;
+    max-width: 700px;
+}
+
+/* S'assurer que le conteneur de la grille est correctement dimensionné */
+#festivals {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box;
+}
+
 .steps-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -280,65 +325,338 @@ h1::after {
     color: var(--text-light);
     margin-bottom: 15px;
 }
-/* Grille des festivals */
+/* ====================================
+   GRID LAYOUT - GRILLE DES FESTIVALS
+   ==================================== */
 #festivals {
     width: 100%;
     max-width: 1600px;
     margin: 30px auto;
     padding: 0 20px;
+    box-sizing: border-box;
+    /* Styles de débogage */
+    border: 2px dashed red;
 }
 
+/* Conteneur principal de la grille */
 .festivals-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 25px;
+    gap: 2rem;
+    width: 100%;
+    margin: 0;
+    padding: 1rem 0;
+    list-style: none;
+    box-sizing: border-box;
+}
+
+/* Styles pour les cartes de la grille */
+.festivals-grid .festival-card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
+
+/* Effet de survol sur les cartes */
+.festivals-grid .festival-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+/* Styles pour l'image de la carte */
+.festivals-grid .festival-image {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* Ratio 16:9 */
+    overflow: hidden;
+}
+
+.festivals-grid .festival-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+/* Effet de zoom sur l'image au survol */
+.festivals-grid .festival-card:hover .festival-image img {
+    transform: scale(1.05);
+}
+
+/* S'assurer que les éléments enfants prennent toute la largeur */
+.festivals-grid > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+}
+
+/* Section de la grille */
+.festivals-section {
+    margin-bottom: 40px;
     width: 100%;
 }
 
-.festivals-section {
-    margin-bottom: 40px;
-}
-
+/* Titre de section */
 .festivals-section h2 {
     color: var(--primary-color);
-    margin-bottom: 20px;
+    margin: 0 0 20px 0;
+    padding: 0;
     font-size: 1.8rem;
     display: flex;
     align-items: center;
     gap: 10px;
+    width: 100%;
 }
 
+/* Icônes dans les titres */
 .festivals-section h2 i {
     color: var(--accent-color);
+    font-size: 1.6rem;
+}
+
+/* Style de base des cartes */
+.festival-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    position: relative;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0; /* Important pour le débordement dans la grille */
+}
+
+/* Style de l'image de la carte */
+.festival-card .festival-image {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%; /* Ratio 16:9 */
+    overflow: hidden;
+}
+
+.festival-card .festival-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+/* Style du contenu de la carte */
+.festival-card .festival-content {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.festival-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.4rem;
+    color: var(--primary-color);
+    line-height: 1.3;
+}
+
+.festival-card .festival-meta {
+    margin-bottom: 1rem;
+    color: var(--text-light);
+    font-size: 0.95rem;
+}
+
+.festival-card .festival-date,
+.festival-card .festival-location {
+    display: flex;
+    align-items: center;
+    margin: 0.5rem 0;
+    line-height: 1.4;
+}
+
+.festival-card .festival-date i,
+.festival-card .festival-location i {
+    margin-right: 0.75rem;
+    color: var(--accent-color);
+    min-width: 20px;
+    text-align: center;
+}
+
+.festival-card .festival-description {
+    margin: 0 0 1.5rem 0;
+    color: var(--text-color);
+    flex-grow: 1;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    line-clamp: 3;
+    text-overflow: ellipsis;
+    max-height: 4.5em; /* Hauteur approximative pour 3 lignes */
+}
+
+.festival-card .festival-actions {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.festival-card .festival-actions .btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.festival-card .festival-actions .btn i {
+    margin-left: 0.5rem;
+    transition: transform 0.3s ease;
+}
+
+.festival-card .festival-actions .btn:hover i {
+    transform: translateX(3px);
+}
+
+/* Badge pour les festivals passés */
+.past-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background-color: var(--danger-color);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    z-index: 1;
+}
+
+/* Effet de survol */
+.festival-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.festival-card:hover .festival-image img {
+    transform: scale(1.05);
 }
 
 /* Styles responsives pour la grille des festivals */
 @media (max-width: 1200px) {
     .festivals-grid {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 20px;
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 992px) {
+    .festivals-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.25rem;
+    }
+    
+    .featured-festivals .section-title {
+        font-size: 2.2rem;
+    }
+    
+    .featured-festivals .section-subtitle {
+        font-size: 1.1rem;
     }
 }
 
 @media (max-width: 768px) {
-    .festivals-grid {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 15px;
+    .featured-festivals {
+        padding: 3rem 0;
     }
     
-    .festivals-section h2 {
-        font-size: 1.5rem;
+    .festivals-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .festival-card {
+        margin: 0 0.5rem;
+    }
+    
+    .featured-festivals .section-title {
+        font-size: 2rem;
+    }
+    
+    .featured-festivals .section-subtitle {
+        font-size: 1rem;
+        margin-bottom: 2rem;
     }
 }
 
-@media (max-width: 480px) {
-    .festivals-grid {
-        grid-template-columns: 1fr;
-        gap: 20px;
+@media (max-width: 576px) {
+    .featured-festivals {
+        padding: 2.5rem 0;
     }
     
-    #festivals {
-        padding: 0 15px;
+    .festivals-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+        padding: 0 1rem;
+    }
+    
+    .festival-card {
+        margin: 0;
+        max-width: 100%;
+    }
+    
+    .featured-festivals .section-title {
+        font-size: 1.75rem;
+    }
+    
+    .featured-festivals .section-subtitle {
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+        padding: 0 1rem;
+    }
+    
+    .festival-card .festival-content {
+        padding: 1.25rem;
+    }
+    
+    .festival-card h3 {
+        font-size: 1.3rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .festival-card .festival-date,
+    .festival-card .festival-location {
+        font-size: 0.9rem;
+    }
+    
+    .festival-card .festival-description {
+        font-size: 0.9rem;
+        margin-bottom: 1.25rem;
+    }
+    
+    .festival-card .festival-actions .btn {
+        padding: 0.65rem 1rem;
+        font-size: 0.95rem;
     }
 }
 
