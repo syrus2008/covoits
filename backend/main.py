@@ -852,21 +852,29 @@ async def add_trajet(request: Request):
 @app.put("/api/trajets/{festival_id}/complet")
 async def mark_complet(festival_id: int, request: Request):
     data = await request.json()
-    index = data["index"]
-    secret = data["secret"]
+    trajet_id = data.get("trajet_id")
+    secret = data.get("secret")
+    
+    if not trajet_id or not secret:
+        return {"error": "Données manquantes"}
+    
     with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
         trajets = json.load(f)
-        filtered = [t for t in trajets if t["festival_id"] == festival_id]
-        actual = [i for i, t in enumerate(trajets) if t["festival_id"] == festival_id]
-        if index < len(filtered):
-            real_index = actual[index]
-            if trajets[real_index].get("secret") == secret:
-                trajets[real_index]["complet"] = True
-                f.seek(0)
-                f.truncate()
-                json.dump(trajets, f, ensure_ascii=False, indent=4)
-                return {"ok": True}
-    return {"error": "Mot-clé incorrect"}
+        # Trouver le trajet par son ID
+        for i, trajet in enumerate(trajets):
+            if str(trajet.get("id")) == str(trajet_id) and trajet.get("festival_id") == festival_id:
+                if trajet.get("secret") == secret:
+                    # Marquer le trajet comme complet
+                    trajets[i]["complet"] = True
+                    # Sauvegarder les modifications
+                    f.seek(0)
+                    f.truncate()
+                    json.dump(trajets, f, ensure_ascii=False, indent=4)
+                    return {"ok": True, "message": "Trajet marqué comme complet avec succès"}
+                else:
+                    return {"error": "Mot-clé incorrect"}
+    
+    return {"error": "Trajet non trouvé ou vous n'avez pas les droits nécessaires"}
 
 @app.put("/api/trajets/{festival_id}/update-places")
 async def update_trajet_places(festival_id: int, request: Request):
