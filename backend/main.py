@@ -610,64 +610,117 @@ async def get_trajets(festival_id: int):
 
 @app.post("/api/trajets")
 async def add_trajet(request: Request):
-    new_trajet = await request.json()
-    
-    # Validation des champs requis
-    required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "telephone", "secret", "date_trajet"]
-    for field in required_fields:
-        if field not in new_trajet:
-            return {"error": f"Champ manquant: {field}"}, 400
-            
-    # Validation du format de l'email
-    if "@" not in new_trajet["contact"] or "." not in new_trajet["contact"]:
-        return {"error": "Format d'email invalide"}, 400
+    try:
+        new_trajet = await request.json()
+        print(f"Nouveau trajet reçu: {new_trajet}")
         
-    # Validation du format du téléphone (format international: +33612345678)
-    import re
-    phone_pattern = r'^\+[0-9]{1,3}[0-9]{8,15}$'
-    if not re.match(phone_pattern, new_trajet["telephone"]):
-        return {"error": "Format de téléphone invalide. Utilisez le format international (ex: +33612345678)"}, 400
-            
-    # Validation de la date du trajet
-    try:
-        trajet_date = datetime.strptime(new_trajet["date_trajet"], "%Y-%m-%d")
-    except (ValueError, TypeError):
-        return {"error": "Format de date invalide. Utilisez le format YYYY-MM-DD"}, 400
-    
-    # Validation des tableaux de données
-    if len(new_trajet["adresses"]) < 2:
-        return {"error": "Au moins deux adresses sont nécessaires (départ et arrivée)"}, 400
-    
-    if len(new_trajet["adresses"]) != len(new_trajet["heures"]) or len(new_trajet["adresses"]) != len(new_trajet["places_par_arret"]):
-        return {"error": "Les tableaux d'adresses, d'heures et de places doivent avoir la même longueur"}, 400
-    
-    # Ajout d'un ID unique au trajet
-    new_trajet["id"] = str(uuid.uuid4())
-    new_trajet["date_creation"] = datetime.now().isoformat()
-    # S'assurer que la date est au bon format
-    new_trajet["date_trajet"] = trajet_date.isoformat()
-    
-    # Ajout de l'ID du conducteur (généré de manière aléatoire)
-    new_trajet["conducteur_id"] = str(uuid.uuid4())
-    
-    # Lecture et mise à jour du fichier des trajets
-    try:
-        with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
-            try:
-                trajets = json.load(f)
-            except json.JSONDecodeError:
-                trajets = []
+        # Validation des champs requis
+        required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "telephone", "secret", "date_trajet"]
+        for field in required_fields:
+            if field not in new_trajet:
+                error_msg = f"Champ manquant: {field}"
+                print(error_msg)
+                return JSONResponse(status_code=400, content={"error": error_msg})
+                return
                 
-            trajets.append(new_trajet)
-            f.seek(0)
-            json.dump(trajets, f, ensure_ascii=False, indent=4)
-            f.truncate()
+        # Validation du format de l'email
+        if not isinstance(new_trajet["contact"], str) or "@" not in new_trajet["contact"] or "." not in new_trajet["contact"]:
+            error_msg = "Format d'email invalide"
+            print(error_msg)
+            return JSONResponse(status_code=400, content={"error": error_msg})
+            return
             
-        return {"message": "Trajet ajouté avec succès", "id": new_trajet["id"]}
+        # Validation du format du téléphone (format international: +33612345678)
+        import re
+        phone_pattern = r'^\+[0-9]{1,3}[0-9]{8,15}$'
+        if not isinstance(new_trajet["telephone"], str) or not re.match(phone_pattern, new_trajet["telephone"]):
+            error_msg = "Format de téléphone invalide. Utilisez le format international (ex: +33612345678)"
+            print(error_msg)
+            return JSONResponse(status_code=400, content={"error": error_msg})
+            return
+                
+        # Validation de la date du trajet
+        try:
+            trajet_date = datetime.strptime(new_trajet["date_trajet"], "%Y-%m-%d")
+        except (ValueError, TypeError) as e:
+            error_msg = "Format de date invalide. Utilisez le format YYYY-MM-DD"
+            print(f"{error_msg}: {str(e)}")
+            return JSONResponse(status_code=400, content={"error": error_msg})
+        return
+        
+        # Validation des tableaux de données
+        if not isinstance(new_trajet["adresses"], list) or len(new_trajet["adresses"]) < 2:
+            error_msg = "Au moins deux adresses sont nécessaires (départ et arrivée)"
+            print(error_msg)
+            return JSONResponse(status_code=400, content={"error": error_msg})
+        return
+        
+        if (not isinstance(new_trajet["heures"], list) or 
+            not isinstance(new_trajet["places_par_arret"], list) or
+            len(new_trajet["adresses"]) != len(new_trajet["heures"]) or 
+            len(new_trajet["adresses"]) != len(new_trajet["places_par_arret"])):
+            error_msg = "Les tableaux d'adresses, d'heures et de places doivent avoir la même longueur"
+            print(error_msg)
+            return JSONResponse(status_code=400, content={"error": error_msg})
+        return
+        
+        # Ajout d'un ID unique au trajet
+        new_trajet["id"] = str(uuid.uuid4())
+        new_trajet["date_creation"] = datetime.now().isoformat()
+        # S'assurer que la date est au bon format
+        new_trajet["date_trajet"] = trajet_date.isoformat()
+        
+        # Ajout de l'ID du conducteur (généré de manière aléatoire)
+        new_trajet["conducteur_id"] = str(uuid.uuid4())
+        
+        # S'assurer que le fichier existe et est valide
+        os.makedirs(os.path.dirname(TRAJETS_FILE), exist_ok=True)
+        if not os.path.exists(TRAJETS_FILE):
+            with open(TRAJETS_FILE, 'w', encoding='utf-8') as f:
+                json.dump([], f)
+        
+        # Lecture et mise à jour du fichier des trajets
+        try:
+            with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
+                try:
+                    trajets = json.load(f)
+                    if not isinstance(trajets, list):
+                        trajets = []
+                except json.JSONDecodeError:
+                    print("Fichier de trajets corrompu, initialisation d'une nouvelle liste")
+                    trajets = []
+                    
+                trajets.append(new_trajet)
+                
+                # Écrire dans un fichier temporaire d'abord
+                temp_file = TRAJETS_FILE + ".tmp"
+                with open(temp_file, 'w', encoding='utf-8') as f_temp:
+                    json.dump(trajets, f_temp, ensure_ascii=False, indent=4, default=str)
+                
+                # Remplacer l'ancien fichier par le nouveau
+                if os.name == 'nt':  # Windows
+                    os.replace(temp_file, TRAJETS_FILE)
+                else:  # Unix/Linux
+                    os.rename(temp_file, TRAJETS_FILE)
+                
+                print(f"Trajet ajouté avec succès. ID: {new_trajet['id']}")
+                return JSONResponse(status_code=200, content={"message": "Trajet ajouté avec succès", "id": new_trajet["id"]})
+            
+        except Exception as e:
+            error_msg = f"Erreur lors de l'écriture du fichier: {str(e)}"
+            print(error_msg)
+            return JSONResponse(status_code=500, content={"error": error_msg})
+            
+    except json.JSONDecodeError:
+        error_msg = "Format de données JSON invalide"
+        print(error_msg)
+        return JSONResponse(status_code=400, content={"error": error_msg})
+        return
         
     except Exception as e:
-        print(f"Erreur lors de l'ajout du trajet: {str(e)}")
-        return {"error": f"Erreur lors de l'ajout du trajet: {str(e)}"}, 500
+        error_msg = f"Erreur inattendue: {str(e)}"
+        print(error_msg)
+        return JSONResponse(status_code=500, content={"error": error_msg})
 
 @app.put("/api/trajets/{festival_id}/complet")
 async def mark_complet(festival_id: int, request: Request):
