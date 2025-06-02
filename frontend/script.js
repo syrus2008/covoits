@@ -957,11 +957,15 @@ function setupTrajetForm() {
             if (isAller) {
                 // Trajet aller : départ -> festival
                 departInput.placeholder = 'Votre adresse de départ';
+                departInput.value = ''; // Vider le champ de départ
                 arriveeInput.value = festival.nom + (festival.lieu ? `, ${festival.lieu}` : '');
+                arriveeInput.placeholder = ''; // Enlever le placeholder de l'arrivée
                 dateInput.value = formatDateForInput(festivalDate);
             } else {
                 // Trajet retour : festival -> domicile
                 departInput.value = festival.nom + (festival.lieu ? `, ${festival.lieu}` : '');
+                departInput.placeholder = ''; // Enlever le placeholder du départ
+                arriveeInput.value = ''; // Vider le champ d'arrivée
                 arriveeInput.placeholder = 'Votre adresse de retour';
                 const nextDay = new Date(festivalDate);
                 nextDay.setDate(nextDay.getDate() + 1);
