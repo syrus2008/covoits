@@ -282,15 +282,64 @@ h1::after {
 }
 /* Grille des festivals */
 #festivals {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 25px;
-    margin: 30px 0;
     width: 100%;
     max-width: 1600px;
-    margin-left: auto;
-    margin-right: auto;
+    margin: 30px auto;
     padding: 0 20px;
+}
+
+.festivals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 25px;
+    width: 100%;
+}
+
+.festivals-section {
+    margin-bottom: 40px;
+}
+
+.festivals-section h2 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.festivals-section h2 i {
+    color: var(--accent-color);
+}
+
+/* Styles responsives pour la grille des festivals */
+@media (max-width: 1200px) {
+    .festivals-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    .festivals-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 15px;
+    }
+    
+    .festivals-section h2 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .festivals-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    #festivals {
+        padding: 0 15px;
+    }
 }
 
 /* Style des cartes de festival */
