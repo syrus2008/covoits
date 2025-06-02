@@ -1,5 +1,5 @@
 // Variables globales
-let currentFestivalId = null;
+window.currentFestivalId = null;
 
 // Fonction pour ouvrir la modale de contact
 async function openContactModal(driverId, trajetId) {
@@ -477,8 +477,14 @@ async function loadFestivals() {
     } // ← cette accolade manquait
 }
 async function loadTrajets(festival_id) {
+    // Mettre à jour l'ID du festival courant
+    window.currentFestivalId = festival_id;
+    
     const trajetsContainer = document.getElementById('trajets');
-    if (!trajetsContainer) return;
+    if (!trajetsContainer) {
+        console.error('Conteneur des trajets non trouvé');
+        return;
+    }
 
     showLoading(trajetsContainer, 'Chargement des trajets...');
 
@@ -598,7 +604,7 @@ async function loadTrajets(festival_id) {
                             <i class="fas fa-trash"></i> Supprimer
                         </button>
                         <button class="btn btn-sm btn-outline-primary" 
-                                onclick="event.preventDefault(); showUpdatePlacesForm('${trajet.id}', ${trajet.places_disponibles || 1})">
+                                onclick="event.preventDefault(); showUpdatePlacesForm('${trajet.id}', ${trajet.places_disponibles || 1}, ${festival_id})">
                             <i class="fas fa-user-edit"></i> Modifier places
                         </button>
                             </div>
@@ -742,47 +748,115 @@ function showSecretForm(trajetId, action) {
 }
 
 // Fonction pour afficher le formulaire de modification des places
-function showUpdatePlacesForm(trajetId, currentPlaces) {
-    // Masquer tous les autres formulaires
-    document.querySelectorAll('.trajet-secret-form').forEach(form => {
-        form.style.display = 'none';
-    });
+function showUpdatePlacesForm(trajetId, currentPlaces, festivalId) {
+    console.log('Appel de showUpdatePlacesForm avec trajetId:', trajetId, 'et places:', currentPlaces);
     
-    // Créer ou afficher le formulaire
-    let form = document.getElementById(`update-places-form-${trajetId}`);
-    if (!form) {
-        form = document.createElement('div');
-        form.id = `update-places-form-${trajetId}`;
-        form.className = 'trajet-secret-form';
-        form.style.marginTop = '10px';
-        form.innerHTML = `
-            <div class="d-flex align-items-center gap-2">
-                <input type="number" id="places-input-${trajetId}" 
-                       class="form-control form-control-sm" 
-                       value="${currentPlaces}" min="1" style="width: 80px;">
-                <button class="btn btn-sm btn-primary" 
-                        onclick="updateTrajetPlaces('${trajetId}', ${festival_id})">
-                    <i class="fas fa-save"></i> Valider
-                </button>
-                <button class="btn btn-sm btn-outline" 
-                        onclick="event.preventDefault(); this.closest('.trajet-secret-form').style.display = 'none';">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        `;
-        document.querySelector(`[data-trajet-id="${trajetId}"] .trajet-actions`).appendChild(form);
+    try {
+        // Masquer tous les autres formulaires
+        document.querySelectorAll('.trajet-secret-form').forEach(form => {
+            form.style.display = 'none';
+        });
+        
+        // Récupérer le conteneur des actions et le conteneur parent
+        const trajetCard = document.querySelector(`[data-trajet-id="${trajetId}"]`);
+        if (!trajetCard) {
+            console.error('Carte de trajet non trouvée pour l\'ID:', trajetId);
+            return;
+        }
+        
+        const actionsContainer = trajetCard.querySelector('.trajet-actions');
+        if (!actionsContainer) {
+            console.error('Conteneur des actions non trouvé pour le trajet ID:', trajetId);
+            return;
+        }
+        
+        // Utiliser le festivalId passé en paramètre ou la variable globale
+        festivalId = festivalId || window.currentFestivalId || 0;
+        
+        // Créer ou afficher le formulaire
+        let form = document.getElementById(`update-places-form-${trajetId}`);
+        if (!form) {
+            console.log('Création du formulaire de modification des places');
+            form = document.createElement('div');
+            form.id = `update-places-form-${trajetId}`;
+            form.className = 'trajet-secret-form';
+            form.style.marginTop = '10px';
+            
+            form.innerHTML = `
+                <div class="d-flex flex-column gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="number" id="places-input-${trajetId}" 
+                               class="form-control form-control-sm" 
+                               value="${currentPlaces}" min="1" style="width: 80px;">
+                        <button class="btn btn-sm btn-primary" 
+                                onclick="confirmUpdatePlaces('${trajetId}', ${festivalId})">
+                            <i class="fas fa-save"></i> Valider
+                        </button>
+                        <button class="btn btn-sm btn-outline" 
+                                onclick="event.preventDefault(); this.closest('.trajet-secret-form').style.display = 'none';">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="secret-update-places-${trajetId}" style="display: none; margin-top: 5px;">
+                        <input type="password" id="secret-input-update-${trajetId}" 
+                               class="form-control form-control-sm" 
+                               placeholder="Mot-clé secret" style="margin-bottom: 5px;">
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-primary" 
+                                    onclick="updateTrajetPlaces('${trajetId}', ${festivalId})">
+                                <i class="fas fa-check"></i> Confirmer
+                            </button>
+                            <button class="btn btn-sm btn-outline" 
+                                    onclick="document.getElementById('secret-update-places-${trajetId}').style.display = 'none';">
+                                <i class="fas fa-times"></i> Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            actionsContainer.appendChild(form);
+            console.log('Formulaire ajouté au DOM');
+        }
+        form.style.display = 'block';
+        console.log('Affichage du formulaire');
+    } catch (error) {
+        console.error('Erreur dans showUpdatePlacesForm:', error);
     }
-    form.style.display = 'block';
+}
+
+// Fonction pour confirmer la modification des places
+function confirmUpdatePlaces(trajetId, festivalId) {
+    const placesInput = document.getElementById(`places-input-${trajetId}`);
+    const places = parseInt(placesInput.value);
+    
+    if (isNaN(places) || places < 1) {
+        showNotification('Veuillez entrer un nombre de places valide (au moins 1)', 'error');
+        return;
+    }
+    
+    // Afficher le champ de mot de passe
+    const secretDiv = document.getElementById(`secret-update-places-${trajetId}`);
+    if (secretDiv) {
+        secretDiv.style.display = 'block';
+        // Faire défendre jusqu'au champ de mot de passe
+        secretDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 // Fonction pour mettre à jour le nombre de places d'un trajet
 async function updateTrajetPlaces(trajetId, festivalId) {
     const placesInput = document.getElementById(`places-input-${trajetId}`);
+    const secretInput = document.getElementById(`secret-input-update-${trajetId}`);
     const newPlaces = parseInt(placesInput.value);
-    const secret = document.getElementById(`secret-${trajetId}`).value;
+    const secret = secretInput ? secretInput.value : '';
     
     if (isNaN(newPlaces) || newPlaces < 1) {
         showNotification('Veuillez entrer un nombre de places valide (au moins 1)', 'error');
+        return;
+    }
+    
+    if (!secret) {
+        showNotification('Veuillez entrer le mot-clé secret', 'error');
         return;
     }
     
@@ -805,11 +879,19 @@ async function updateTrajetPlaces(trajetId, festivalId) {
             throw new Error(result.error);
         }
         
-        showNotification('Nombre de places mis à jour avec succès', 'success');
+        showNotification(result.message || 'Nombre de places mis à jour avec succès', 'success');
+        
+        // Recharger la liste des trajets
         loadTrajets(festivalId);
+        
+        // Masquer le formulaire de modification
+        const form = document.getElementById(`update-places-form-${trajetId}`);
+        if (form) {
+            form.style.display = 'none';
+        }
     } catch (error) {
         console.error('Erreur lors de la mise à jour des places:', error);
-        showNotification(error.message || 'Une erreur est survenue', 'error');
+        showNotification(error.message || 'Une erreur est survenue lors de la mise à jour des places', 'error');
     }
 }
 
