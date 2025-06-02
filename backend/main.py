@@ -62,6 +62,7 @@ class ContactRequest(BaseModel):
     name: str
     email: str
     message: Optional[str] = None
+    places_demandees: int = 1  # Nombre de places demandées par le passager
 
 class ContactResponse(BaseModel):
     success: bool
@@ -268,6 +269,40 @@ async def load_trajet(trajet_id: str) -> Optional[Dict]:
         print(f"Erreur lors du chargement du trajet: {e}")
         return None
 
+def get_demandes_trajet(trajet_id: str) -> list:
+    """Récupère toutes les demandes pour un trajet donné."""
+    try:
+        with open('backend/data/demandes.json', 'r', encoding='utf-8') as f:
+            demandes = json.load(f)
+        return [d for d in demandes if d.get('trajet_id') == trajet_id]
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+def get_places_restantes(trajet_id: str) -> tuple[int, bool]:
+    """
+    Calcule le nombre de places restantes pour un trajet.
+    Retourne (places_restantes, est_complet)
+    """
+    try:
+        with open('backend/data/trajets.json', 'r', encoding='utf-8') as f:
+            trajets = json.load(f)
+        trajet = next((t for t in trajets if str(t.get('id')) == trajet_id), None)
+        if not trajet:
+            return 0, True
+            
+        places_totales = trajet.get('places_disponibles', 0)
+        demandes = get_demandes_trajet(trajet_id)
+        places_prises = sum(d.get('places_demandees', 0) for d in demandes)
+        
+        places_restantes = max(0, places_totales - places_prises)
+        est_complet = places_restantes <= 0
+        
+        return places_restantes, est_complet
+        
+    except Exception as e:
+        print(f"Erreur lors du calcul des places restantes: {str(e)}")
+        return 0, True
+
 # Route pour la demande de contact
 @app.post("/api/contact-request", response_model=ContactResponse)
 async def contact_request(contact: ContactRequest):
@@ -283,6 +318,17 @@ async def contact_request(contact: ContactRequest):
         trajet = next((t for t in trajets if str(t.get('id')) == contact.trajetId), None)
         if not trajet:
             raise HTTPException(status_code=404, detail="Trajet non trouvé")
+            
+        # Vérifier les places disponibles
+        places_restantes, est_complet = get_places_restantes(contact.trajetId)
+        if est_complet:
+            raise HTTPException(status_code=400, detail="Désolé, ce trajet est déjà complet.")
+            
+        if contact.places_demandees > places_restantes:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Il ne reste que {places_restantes} place(s) disponible(s) pour ce trajet."
+            )
         
         # Charger les informations du festival
         with open('backend/data/festivals.json', 'r', encoding='utf-8') as f:
@@ -331,14 +377,68 @@ async def contact_request(contact: ContactRequest):
         driver_email_html = await load_email_template('driver_notification', driver_context)
         passenger_email_html = await load_email_template('passenger_confirmation', passenger_context)
 
+        # Enregistrer la demande
+        try:
+            with open('backend/data/demandes.json', 'r+', encoding='utf-8') as f:
+                try:
+                    demandes = json.load(f)
+                except json.JSONDecodeError:
+                    demandes = []
+                
+                nouvelle_demande = {
+                    'id': str(len(demandes) + 1),
+                    'trajet_id': contact.trajetId,
+                    'passager_email': contact.email,
+                    'passager_nom': contact.name,
+                    'places_demandees': contact.places_demandees,
+                    'date_demande': datetime.now().isoformat(),
+                    'statut': 'en_attente'
+                }
+                demandes.append(nouvelle_demande)
+                
+                f.seek(0)
+                json.dump(demandes, f, ensure_ascii=False, indent=2)
+                f.truncate()
+                
+        except Exception as e:
+            print(f"Erreur lors de l'enregistrement de la demande: {str(e)}")
+            raise HTTPException(
+                status_code=500, 
+                detail="Une erreur est survenue lors de l'enregistrement de votre demande"
+            )
+        
+        # Mettre à jour le statut du trajet si nécessaire
+        places_restantes, est_complet = get_places_restantes(contact.trajetId)
+        if est_complet:
+            try:
+                with open('backend/data/trajets.json', 'r+', encoding='utf-8') as f:
+                    trajets = json.load(f)
+                    for t in trajets:
+                        if str(t.get('id')) == contact.trajetId:
+                            t['statut'] = 'complet'
+                            break
+                    f.seek(0)
+                    json.dump(trajets, f, ensure_ascii=False, indent=2)
+                    f.truncate()
+            except Exception as e:
+                print(f"Erreur lors de la mise à jour du statut du trajet: {str(e)}")
+        
         # Envoyer les emails
         email_sent = True
+        
+        # Mettre à jour le contexte avec les places restantes
+        driver_context['places_restantes'] = max(0, places_restantes - contact.places_demandees)
+        passenger_context['places_restantes'] = driver_context['places_restantes']
+        
+        # Recharger les templates avec le contexte mis à jour
+        driver_email_html = await load_email_template('driver_notification', driver_context)
+        passenger_email_html = await load_email_template('passenger_confirmation', passenger_context)
         
         # Email au conducteur
         if trajet.get('contact_email'):
             email_sent = await send_email(
                 recipient_email=trajet['contact_email'],
-                subject="[Covoiturage Festival] Nouvelle demande pour votre trajet",
+                subject=f"[Covoiturage Festival] Nouvelle demande pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !",
                 body=driver_email_html,
                 is_html=True
             )
@@ -347,7 +447,7 @@ async def contact_request(contact: ContactRequest):
         if email_sent:
             email_sent = await send_email(
                 recipient_email=contact.email,
-                subject="[Covoiturage Festival] Confirmation de votre demande",
+                subject=f"[Covoiturage Festival] Confirmation de votre demande ({contact.places_demandees} place(s))",
                 body=passenger_email_html,
                 is_html=True
             )

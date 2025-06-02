@@ -691,6 +691,18 @@ function setupTrajetForm() {
 
         // Mettre à jour l'ID du festival dans le formulaire
         document.getElementById('festival-id').value = festival.id;
+        
+        // Mettre à jour le titre de la page avec le nom du festival
+        const festivalTitle = document.getElementById('festival-nom');
+        if (festivalTitle) {
+            festivalTitle.textContent = festival.nom || 'Détails du festival';
+        }
+
+        // Récupérer les champs d'adresse
+        const adresseInputs = document.querySelectorAll('.adresse');
+        const departInput = adresseInputs[0]; // Premier champ (départ)
+        const arriveeInput = adresseInputs[adresseInputs.length - 1]; // Dernier champ (arrivée)
+
 
         // Définir les dates min/max pour le champ de date
         const dateInput = document.getElementById('trajet-date');
@@ -699,8 +711,6 @@ function setupTrajetForm() {
         
         // Si le festival est aujourd'hui ou dans le futur
         if (festivalDate >= today) {
-            // Pour les trajets aller, la date doit être avant ou égale à la date du festival
-            // Pour les retours, après ou égale à la date du festival
             dateInput.min = formatDateForInput(festivalDate);
             dateInput.max = formatDateForInput(new Date(festivalDate.getTime() + 7 * 24 * 60 * 60 * 1000)); // Jusqu'à 7 jours après
         } else {
@@ -711,15 +721,33 @@ function setupTrajetForm() {
             dateInput.max = formatDateForInput(dayAfter);
         }
 
-        // Définir la date par défaut
-        const trajetType = document.querySelector('input[name="trajet_type"]:checked').value;
-        if (trajetType === 'aller') {
-            dateInput.value = formatDateForInput(festivalDate);
-        } else {
-            const nextDay = new Date(festivalDate);
-            nextDay.setDate(nextDay.getDate() + 1);
-            dateInput.value = formatDateForInput(nextDay);
+        // Fonction pour mettre à jour les champs en fonction du type de trajet
+        function updateFormFields(isAller) {
+            if (isAller) {
+                // Trajet aller : départ -> festival
+                departInput.placeholder = 'Votre adresse de départ';
+                arriveeInput.value = festival.nom + (festival.lieu ? `, ${festival.lieu}` : '');
+                dateInput.value = formatDateForInput(festivalDate);
+            } else {
+                // Trajet retour : festival -> domicile
+                departInput.value = festival.nom + (festival.lieu ? `, ${festival.lieu}` : '');
+                arriveeInput.placeholder = 'Votre adresse de retour';
+                const nextDay = new Date(festivalDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                dateInput.value = formatDateForInput(nextDay);
+            }
         }
+
+        // Définir les valeurs initiales
+        const trajetType = document.querySelector('input[name="trajet_type"]:checked').value;
+        updateFormFields(trajetType === 'aller');
+        
+        // Mettre à jour les champs quand le type de trajet change
+        document.querySelectorAll('input[name="trajet_type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                updateFormFields(e.target.value === 'aller');
+            });
+        });
     }
 
     // Formater la date pour l'input date (YYYY-MM-DD)
