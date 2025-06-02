@@ -597,6 +597,10 @@ async function loadTrajets(festival_id) {
                                 onclick="event.preventDefault(); showSecretForm('${trajet.id}', 'delete')">
                             <i class="fas fa-trash"></i> Supprimer
                         </button>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="event.preventDefault(); showUpdatePlacesForm('${trajet.id}', ${trajet.places_disponibles || 1})">
+                            <i class="fas fa-user-edit"></i> Modifier places
+                        </button>
                             </div>
                         </div>
                     </div>
@@ -734,6 +738,78 @@ function showSecretForm(trajetId, action) {
         }
     } else if (action === 'delete') {
         document.getElementById(`delete-form-${trajetId}`).style.display = 'block';
+    }
+}
+
+// Fonction pour afficher le formulaire de modification des places
+function showUpdatePlacesForm(trajetId, currentPlaces) {
+    // Masquer tous les autres formulaires
+    document.querySelectorAll('.trajet-secret-form').forEach(form => {
+        form.style.display = 'none';
+    });
+    
+    // Créer ou afficher le formulaire
+    let form = document.getElementById(`update-places-form-${trajetId}`);
+    if (!form) {
+        form = document.createElement('div');
+        form.id = `update-places-form-${trajetId}`;
+        form.className = 'trajet-secret-form';
+        form.style.marginTop = '10px';
+        form.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+                <input type="number" id="places-input-${trajetId}" 
+                       class="form-control form-control-sm" 
+                       value="${currentPlaces}" min="1" style="width: 80px;">
+                <button class="btn btn-sm btn-primary" 
+                        onclick="updateTrajetPlaces('${trajetId}', ${festival_id})">
+                    <i class="fas fa-save"></i> Valider
+                </button>
+                <button class="btn btn-sm btn-outline" 
+                        onclick="event.preventDefault(); this.closest('.trajet-secret-form').style.display = 'none';">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+        document.querySelector(`[data-trajet-id="${trajetId}"] .trajet-actions`).appendChild(form);
+    }
+    form.style.display = 'block';
+}
+
+// Fonction pour mettre à jour le nombre de places d'un trajet
+async function updateTrajetPlaces(trajetId, festivalId) {
+    const placesInput = document.getElementById(`places-input-${trajetId}`);
+    const newPlaces = parseInt(placesInput.value);
+    const secret = document.getElementById(`secret-${trajetId}`).value;
+    
+    if (isNaN(newPlaces) || newPlaces < 1) {
+        showNotification('Veuillez entrer un nombre de places valide (au moins 1)', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/trajets/${festivalId}/update-places`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true' 
+            },
+            body: JSON.stringify({ 
+                trajet_id: trajetId,
+                places: newPlaces,
+                secret: secret
+            })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        showNotification('Nombre de places mis à jour avec succès', 'success');
+        loadTrajets(festivalId);
+    } catch (error) {
+        console.error('Erreur lors de la mise à jour des places:', error);
+        showNotification(error.message || 'Une erreur est survenue', 'error');
     }
 }
 
