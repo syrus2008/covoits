@@ -573,7 +573,7 @@ async def add_festival(request: Request):
         json.dump(festivals, f, ensure_ascii=False, indent=4)
     return {"message": "Festival ajouté avec succès"}
 
-@app.get("/api/trajets/{festival_id}")
+("/api/tra@app.getjets/{festival_id}")
 async def get_trajets(festival_id: str):
     try:
         # Convertir festival_id en entier si c'est une chaîne de caractères
@@ -692,7 +692,7 @@ async def add_trajet(request: Request):
         new_trajet["conducteur_id"] = str(uuid.uuid4())
         
         # Utiliser un chemin absolu pour le fichier de trajets
-        trajets_file = os.path.join(os.getcwd(), "trajets.json")
+        trajets_file = "backend/data/trajets.json"
         
         # S'assurer que le fichier existe et est valide
         os.makedirs(os.path.dirname(trajets_file), exist_ok=True)
