@@ -287,153 +287,240 @@ async function loadFestivals() {
         // Cacher l'animation de chargement
         const loadingElement = document.querySelector('.loading');
         if (loadingElement) {
-            loadingElement.style.display = 'none';
+            loadingElement.remove(); // ou loadingElement.style.display = 'none';
         }
-    }
+    } // ← cette accolade manquait
 }
-
-// Fonction pour charger et afficher les trajets d'un festival
 async function loadTrajets(festival_id) {
-    const container = document.getElementById('trajets');
-    if (!container) return;
-    
-    // Afficher un indicateur de chargement
-    container.innerHTML = `
-        <div class="loading">
-            <div class="spinner"></div>
-            <p>Chargement des trajets en cours...</p>
-        </div>
-    `;
-    
+    const trajetsContainer = document.getElementById('trajets');
+    if (!trajetsContainer) return;
+
+    showLoading(trajetsContainer, 'Chargement des trajets...');
+
     try {
-        // Récupérer les informations du festival
-        const [festivalResponse, trajetsResponse] = await Promise.all([
-            fetch(`/api/festivals`),
-            fetch(`/api/trajets/${festival_id}`, { 
-                headers: { 'ngrok-skip-browser-warning': 'true' } 
-            })
-        ]);
+        const response = await fetch(`/api/trajets/${festival_id}`);
+        if (!response.ok) throw new Error('Erreur lors du chargement des trajets');
         
-        if (!festivalResponse.ok || !trajetsResponse.ok) {
-            throw new Error('Erreur lors du chargement des données');
-        }
+        const trajets = await response.json();
         
-        const festivals = await festivalResponse.json();
-        const trajets = await trajetsResponse.json();
-        
-        // Trouver le festival correspondant
-        const festival = festivals.find(f => f.id == festival_id);
-        
-        // Mettre à jour le titre de la page
-        const titleElement = document.getElementById('festival-nom');
-        if (titleElement && festival) {
-            titleElement.textContent = `Covoiturage pour ${festival.nom}`;
-            document.title = `Covoiturage - ${festival.nom} | Covoiturage Festival`;
-        }
-        
-        // Vider le conteneur
-        container.innerHTML = '';
-        
-        // Afficher un message si aucun trajet n'est disponible
         if (trajets.length === 0) {
-            container.innerHTML = `
+            trajetsContainer.innerHTML = `
                 <div class="no-results">
                     <i class="fas fa-car-side"></i>
-                    <h3>Aucun trajet disponible</h3>
-                    <p>Soyez le premier à proposer un trajet pour ce festival !</p>
-                </div>
-            `;
+                    <p>Aucun trajet disponible pour le moment</p>
+                    <button class="btn btn-primary" id="show-trajet-form">
+                        <i class="fas fa-plus"></i> Proposer un trajet
+                    </button>
+                </div>`;
+            
+            // Ajouter l'événement pour afficher le formulaire
+            const showFormBtn = document.getElementById('show-trajet-form');
+            if (showFormBtn) {
+                showFormBtn.addEventListener('click', () => {
+                    const formContainer = document.getElementById('trajet-form-container');
+                    if (formContainer) {
+                        formContainer.style.display = 'block';
+                        showFormBtn.style.display = 'none';
+                        window.scrollTo({
+                            top: formContainer.offsetTop - 20,
+                            behavior: 'smooth'
+                        });
+                    }
+                });
+            }
             return;
         }
-        
-        // Afficher chaque trajet
-        trajets.forEach((trajet, index) => {
-            const trajetElement = document.createElement('div');
-            trajetElement.className = `trajet fade-in ${trajet.complet ? 'completed' : ''}`;
-            trajetElement.style.animationDelay = `${index * 0.1}s`;
-            
-            trajetElement.innerHTML = `
-                <div class="trajet-header">
-                    <div class="trajet-details">
-                        <h3><i class="fas fa-map-marker-alt"></i> ${trajet.depart}</h3>
-                        <p class="trajet-time"><i class="far fa-clock"></i> ${trajet.heure}</p>
-                    </div>
-                    <div class="trajet-places">
-                        <span class="badge">
-                            <i class="fas fa-users"></i> ${trajet.places} place${trajet.places > 1 ? 's' : ''}
-                        </span>
-                    </div>
-                </div>
-                <div class="trajet-contact">
-                    <p><i class="fas fa-user"></i> ${trajet.contact}</p>
-                </div>
-                <div class="trajet-actions">
-                    <div class="secret-input">
-                        <input 
-                            type="password" 
-                            id="secret-${index}" 
-                            placeholder="Mot-clé secret"
-                            class="form-control"
-                        >
-                    </div>
-                    <button 
-                        onclick="markComplet(${festival_id}, ${index})" 
-                        class="btn btn-sm ${trajet.complet ? 'btn-secondary' : 'btn-success'}"
-                        ${trajet.complet ? 'disabled' : ''}
-                    >
-                        <i class="fas fa-${trajet.complet ? 'check' : 'check-double'}"></i>
-                        ${trajet.complet ? 'Complet' : 'Marquer comme complet'}
-                    </button>
-                    <button 
-                        onclick="deleteTrajet(${festival_id}, ${index})" 
-                        class="btn btn-sm btn-danger"
-                    >
-                        <i class="fas fa-trash"></i> Supprimer
-                    </button>
-                </div>
-            `;
-            
-            container.appendChild(trajetElement);
-        });
-    } catch (error) {
-        console.error('Erreur:', error);
-        container.innerHTML = `
-            <div class="error-message">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Erreur de chargement</h3>
-                <p>Impossible de charger les trajets. Veuillez réessayer plus tard.</p>
-                <button onclick="loadTrajets(${festival_id})" class="btn">
-                    <i class="fas fa-sync-alt"></i> Réessayer
+
+        // Trier les trajets par date de création (du plus récent au plus ancien)
+        trajets.sort((a, b) => new Date(b.date_creation) - new Date(a.date_creation));
+
+        let html = `
+            <div class="trajets-header">
+                <h3>Trajets disponibles</h3>
+                <button class="btn btn-primary" id="show-trajet-form">
+                    <i class="fas fa-plus"></i> Proposer un trajet
                 </button>
             </div>
+            <div class="trajets-list">
         `;
+
+        trajets.forEach((trajet, index) => {
+            const isComplet = trajet.complet || trajet.places_disponibles <= 0;
+            const typeTrajet = trajet.type === 'retour' ? 'Retour du festival' : 'Aller au festival';
+            const iconType = trajet.type === 'retour' ? 'fa-home' : 'fa-ticket-alt';
+            
+            html += `
+                <div class="trajet-card ${isComplet ? 'complet' : ''}" data-index="${index}" data-trajet-id="${trajet.id}">
+                    <div class="trajet-header">
+                        <div class="trajet-type">
+                            <i class="fas ${iconType}"></i>
+                            ${typeTrajet}
+                        </div>
+                        <div class="trajet-places ${isComplet ? 'complet' : ''}">
+                            <i class="fas fa-users"></i>
+                            ${trajet.places_disponibles} place${trajet.places_disponibles > 1 ? 's' : ''} disponible${trajet.places_disponibles > 1 ? 's' : ''}
+                            ${trajet.prix > 0 ? `• ${trajet.prix.toFixed(2)} €/pers` : ''}
+                        </div>
+                    </div>
+                    
+                    <div class="trajet-details">
+                        <div class="trajet-etapes">
+                            ${genererEtapesTrajet(trajet)}
+                        </div>
+                        
+                        ${trajet.commentaires ? `
+                            <div class="trajet-comment">
+                                <i class="fas fa-comment-alt"></i>
+                                ${trajet.commentaires}
+                            </div>` : ''
+                        }
+                        
+                        <div class="trajet-footer">
+                            <div class="trajet-meta">
+                                <div class="trajet-contact">
+                                    <i class="fas fa-${trajet.contact && trajet.contact.includes('@') ? 'envelope' : 'phone'}"></i>
+                                    ${trajet.contact || 'Contact non fourni'}
+                                </div>
+                                <div class="trajet-date">
+                                    <i class="far fa-clock"></i>
+                                    Posté le ${new Date(trajet.date_creation).toLocaleDateString('fr-FR')}
+                                </div>
+                            </div>
+                            
+                            <div class="trajet-actions">
+                                <button class="btn btn-sm btn-outline" 
+                                        onclick="contacterConducteur('${trajet.contact || ''}')">
+                                    <i class="fas fa-envelope"></i> Contacter
+                                </button>
+                                <button class="btn btn-sm ${isComplet ? 'btn-secondary' : 'btn-success'}" 
+                                        onclick="markComplet(${festival_id}, '${trajet.id}')" 
+                                        ${isComplet ? 'disabled' : ''}>
+                                    <i class="fas fa-${isComplet ? 'check' : 'check-double'}"></i>
+                                    ${isComplet ? 'Complet' : 'Marquer complet'}
+                                </button>
+                                <button class="btn btn-sm btn-danger" 
+                                        onclick="deleteTrajet(${festival_id}, '${trajet.id}')">
+                                    <i class="fas fa-trash"></i>
+                                    Supprimer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        });
+
+        html += '</div>'; // Fermeture de .trajets-list
+        trajetsContainer.innerHTML = html;
+
+        // Ajouter l'événement pour afficher le formulaire
+        const showFormBtn = document.getElementById('show-trajet-form');
+        if (showFormBtn) {
+            showFormBtn.addEventListener('click', () => {
+                const formContainer = document.getElementById('trajet-form-container');
+                if (formContainer) {
+                    formContainer.style.display = 'block';
+                    showFormBtn.style.display = 'none';
+                    window.scrollTo({
+                        top: formContainer.offsetTop - 20,
+                        behavior: 'smooth'
+                    });
+                }
+            });
+        }
+
+    } catch (error) {
+        console.error('Erreur:', error);
+        showError(trajetsContainer, 'Impossible de charger les trajets. Veuillez réessayer plus tard.');
     }
 }
 
-async function addTrajet(festival_id) {
-    const depart = document.getElementById('depart').value;
-    const heure = document.getElementById('heure').value;
-    const places = document.getElementById('places').value;
-    const contact = document.getElementById('contact').value;
-    const secret = document.getElementById('secret').value;
+// Fonction pour générer le HTML des étapes d'un trajet
+function genererEtapesTrajet(trajet) {
+    if (!trajet.adresses || !trajet.heures || trajet.adresses.length === 0) {
+        return '<div class="alert alert-warning">Aucune étape définie pour ce trajet</div>';
+    }
+    
+    let html = '';
+    const totalEtapes = trajet.adresses.length;
+    
+    // Ajouter le départ
+    if (trajet.adresses[0]) {
+        html += `
+            <div class="etape depart">
+                <div class="etape-point">
+                    <i class="fas fa-flag"></i>
+                </div>
+                <div class="etape-details">
+                    <div class="etape-heure">${formatTime(trajet.heures[0])}</div>
+                    <div class="etape-lieu">${trajet.adresses[0]}</div>
+                    ${trajet.places_par_arret && trajet.places_par_arret[0] !== undefined ? `
+                        <div class="etape-places">
+                            <i class="fas fa-users"></i>
+                            ${trajet.places_par_arret[0]} place${trajet.places_par_arret[0] > 1 ? 's' : ''} disponible${trajet.places_par_arret[0] > 1 ? 's' : ''}
+                        </div>` : ''
+                    }
+                </div>
+            </div>`;
+    }
+    
+    // Ajouter les arrêts intermédiaires
+    for (let i = 1; i < totalEtapes - 1; i++) {
+        if (trajet.adresses[i]) {
+            html += `
+                <div class="etape arret">
+                    <div class="etape-point">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <div class="etape-details">
+                        <div class="etape-heure">${formatTime(trajet.heures[i])}</div>
+                        <div class="etape-lieu">${trajet.adresses[i]}</div>
+                        ${trajet.places_par_arret && trajet.places_par_arret[i] !== undefined ? `
+                            <div class="etape-places">
+                                <i class="fas fa-users"></i>
+                                ${trajet.places_par_arret[i]} place${trajet.places_par_arret[i] > 1 ? 's' : ''} disponible${trajet.places_par_arret[i] > 1 ? 's' : ''}
+                            </div>` : ''
+                        }
+                    </div>
+                </div>`;
+        }
+    }
+    
+    // Ajouter l'arrivée
+    if (totalEtapes > 1 && trajet.adresses[totalEtapes - 1]) {
+        const lastIndex = totalEtapes - 1;
+        html += `
+            <div class="etape arrivee">
+                <div class="etape-point">
+                    <i class="fas fa-flag-checkered"></i>
+                </div>
+                <div class="etape-details">
+                    <div class="etape-heure">${formatTime(trajet.heures[lastIndex])}</div>
+                    <div class="etape-lieu">${trajet.adresses[lastIndex]}</div>
+                    ${trajet.places_par_arret && trajet.places_par_arret[lastIndex] !== undefined ? `
+                        <div class="etape-places">
+                            <i class="fas fa-users"></i>
+                            ${trajet.places_par_arret[lastIndex]} place${trajet.places_par_arret[lastIndex] > 1 ? 's' : ''} disponible${trajet.places_par_arret[lastIndex] > 1 ? 's' : ''}
+                        </div>` : ''
+                    }
+                </div>
+            </div>`;
+    }
+    
+    return html;
+}
 
-    const trajet = {
-        festival_id: festival_id,
-        depart: depart,
-        heure: heure,
-        places: parseInt(places),
-        contact: contact,
-        secret: secret,
-        complet: false
-    };
-
-    await fetch('/api/trajets', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-        body: JSON.stringify(trajet)
-    });
-
-    loadTrajets(festival_id);
+// Fonction pour contacter le conducteur
+function contacterConducteur(contact) {
+    if (!contact) {
+        showNotification('Aucune information de contact disponible', 'error');
+        return;
+    }
+    
+    if (contact.includes('@')) {
+        window.location.href = `mailto:${contact}?subject=Covoiturage Festival`;
+    } else {
+        window.location.href = `tel:${contact}`;
+    }
 }
 
 async function markComplet(festival_id, index) {
@@ -456,18 +543,71 @@ async function deleteTrajet(festival_id, index) {
     loadTrajets(festival_id);
 }
 
+// Fonction pour ajouter un arrêt intermédiaire
+function ajouterArretIntermediaire() {
+    const arretsContainer = document.getElementById('arrets-container');
+    if (!arretsContainer) return;
+
+    const arretId = Date.now(); // ID unique pour l'arrêt
+    
+    const arretElement = document.createElement('div');
+    arretElement.className = 'arret-intermediaire';
+    arretElement.dataset.id = arretId;
+    
+    arretElement.innerHTML = `
+        <div class="etape-container">
+            <button type="button" class="supprimer-arret" data-arret-id="${arretId}" title="Supprimer cet arrêt">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="form-group">
+                <label>Arrêt intermédiaire</label>
+                <input type="text" class="form-control adresse" placeholder="Adresse de l'arrêt" required>
+            </div>
+            <div class="form-group">
+                <label>Heure de passage</label>
+                <input type="time" class="form-control heure-passage" required>
+            </div>
+            <div class="form-group">
+                <label>Places disponibles à cet arrêt</label>
+                <input type="number" class="form-control places-arret" min="1" value="1" required>
+            </div>
+        </div>
+    `;
+    
+    arretsContainer.appendChild(arretElement);
+    
+    // Ajouter l'événement de suppression
+    const supprimerBtn = arretElement.querySelector('.supprimer-arret');
+    if (supprimerBtn) {
+        supprimerBtn.addEventListener('click', () => {
+            arretElement.remove();
+        });
+    }
+    
+    return arretId;
+}
 
 // Gestionnaire d'événements pour le formulaire d'ajout de trajet
 function setupTrajetForm() {
     const form = document.getElementById('trajet-form');
+    const ajouterArretBtn = document.getElementById('ajouter-arret');
+    
     if (!form) return;
-    
-    const festivalId = new URLSearchParams(window.location.search).get('id');
-    if (!festivalId) return;
-    
+
+    // Gérer l'ajout d'un arrêt intermédiaire
+    if (ajouterArretBtn) {
+        ajouterArretBtn.addEventListener('click', ajouterArretIntermediaire);
+    }
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const festivalId = new URLSearchParams(window.location.search).get('id');
+        if (!festivalId) {
+            showNotification('Erreur: Aucun festival sélectionné', 'error');
+            return;
+        }
+
         const submitButton = form.querySelector('button[type="submit"]');
         const originalButtonText = submitButton.innerHTML;
         
@@ -475,15 +615,95 @@ function setupTrajetForm() {
             // Désactiver le bouton pendant l'envoi
             submitButton.disabled = true;
             submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi en cours...';
+
+            // Récupérer les données du formulaire
+            const typeTrajet = form.querySelector('input[name="trajet_type"]:checked').value;
+            const adresses = [];
+            const heures = [];
+            const placesParArret = [];
+
+            // Récupérer le point de départ
+            const etapeDepart = form.querySelector('.etape-container:first-of-type');
+            adresses.push(etapeDepart.querySelector('.adresse').value);
+            heures.push(etapeDepart.querySelector('.heure-depart').value);
+            const placesDepart = parseInt(document.getElementById('places').value, 10);
+            placesParArret.push(placesDepart);
+
+            // Récupérer les arrêts intermédiaires
+            const arrets = form.querySelectorAll('.arret-intermediaire');            
+            arrets.forEach(arret => {
+                const adresse = arret.querySelector('.adresse').value;
+                const heure = arret.querySelector('.heure-passage').value;
+                const places = parseInt(arret.querySelector('.places-arret').value, 10);
+                
+                if (adresse && heure) {
+                    adresses.push(adresse);
+                    heures.push(heure);
+                    placesParArret.push(places);
+                }
+            });
+
+            // Récupérer le point d'arrivée
+            const etapeArrivee = form.querySelector('.etape-container:last-of-type');
+            adresses.push(etapeArrivee.querySelector('.adresse').value);
+            heures.push(etapeArrivee.querySelector('.heure-arrivee').value);
+            placesParArret.push(placesDepart); // Même nombre de places qu'au départ
+
+            // Vérifier qu'il y a au moins un point de départ et d'arrivée
+            if (adresses.length < 2) {
+                throw new Error('Veuillez spécifier au moins un point de départ et une destination');
+            }
+
+            // Préparer les données du trajet
+            const trajetData = {
+                festival_id: parseInt(festivalId, 10),
+                type: typeTrajet,
+                adresses: adresses,
+                heures: heures,
+                places_par_arret: placesParArret,
+                places_disponibles: Math.min(...placesParArret), // Le nombre de places disponibles est le minimum des places par arrêt
+                prix: parseFloat(document.getElementById('prix').value) || 0,
+                commentaires: document.getElementById('commentaires').value,
+                contact: document.getElementById('contact').value,
+                secret: document.getElementById('secret').value,
+                date_creation: new Date().toISOString()
+            };
+
+            console.log('Données du trajet à envoyer:', trajetData);
+
+            // Envoyer les données au serveur
+            const response = await fetch('/api/trajets', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(trajetData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || 'Erreur lors de l\'ajout du trajet');
+            }
             
-            await addTrajet(parseInt(festivalId));
-            
-            // Réinitialiser le formulaire après un ajout réussi
+            // Réinitialiser le formulaire
             form.reset();
+            document.getElementById('arrets-container').innerHTML = ''; // Supprimer les arrêts ajoutés
             showNotification('Trajet ajouté avec succès !', 'success');
+            
+            // Recharger la liste des trajets
+            await loadTrajets(festivalId);
+            
+            // Fermer le formulaire
+            const trajetFormContainer = document.getElementById('trajet-form-container');
+            const showTrajetFormBtn = document.getElementById('show-trajet-form');
+            if (trajetFormContainer && showTrajetFormBtn) {
+                trajetFormContainer.style.display = 'none';
+                showTrajetFormBtn.style.display = 'inline-flex';
+            }
+            
         } catch (error) {
-            console.error('Erreur:', error);
-            showNotification('Erreur lors de l\'ajout du trajet', 'error');
+            console.error('Erreur lors de l\'ajout du trajet:', error);
+            showNotification(error.message || 'Une erreur est survenue lors de l\'ajout du trajet', 'error');
         } finally {
             // Réactiver le bouton
             submitButton.disabled = false;

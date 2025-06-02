@@ -52,23 +52,76 @@
                 <div class="card-body">
                     <form id="trajet-form">
                         <div class="form-group">
-                            <label for="depart">Ville de départ</label>
-                            <input type="text" id="depart" class="form-control" placeholder="Ex: Bruxelles" required>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="heure">Heure de départ</label>
-                                <input type="time" id="heure" class="form-control" required>
+                            <label>Type de trajet</label>
+                            <div class="radio-group">
+                                <label class="radio-container">
+                                    <input type="radio" name="trajet_type" value="aller" checked>
+                                    <span class="radio-custom"></span>
+                                    Aller au festival
+                                </label>
+                                <label class="radio-container">
+                                    <input type="radio" name="trajet_type" value="retour">
+                                    <span class="radio-custom"></span>
+                                    Retour du festival
+                                </label>
                             </div>
+                        </div>
+
+                        <div id="trajet-container">
+                            <div class="etape-container">
+                                <div class="form-group">
+                                    <label>Point de départ</label>
+                                    <input type="text" class="form-control adresse" placeholder="Adresse complète" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Heure de départ</label>
+                                    <input type="time" class="form-control heure-depart" required>
+                                </div>
+                            </div>
+
+                            <div id="arrets-container">
+                                <!-- Les arrêts seront ajoutés ici dynamiquement -->
+                            </div>
+
+                            <div class="etape-container">
+                                <div class="form-group">
+                                    <label>Destination finale</label>
+                                    <input type="text" class="form-control adresse" placeholder="Adresse complète" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Heure d'arrivée estimée</label>
+                                    <input type="time" class="form-control heure-arrivee" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" id="ajouter-arret" class="btn btn-sm btn-outline">
+                                <i class="fas fa-plus"></i> Ajouter un arrêt intermédiaire
+                            </button>
+                        </div>
+
+                        <div class="form-row">
                             <div class="form-group">
                                 <label for="places">Places disponibles</label>
                                 <input type="number" id="places" class="form-control" min="1" value="1" required>
                             </div>
+                            <div class="form-group">
+                                <label for="prix">Prix par personne (€)</label>
+                                <input type="number" id="prix" class="form-control" min="0" step="0.5" value="0">
+                            </div>
                         </div>
+
+                        <div class="form-group">
+                            <label for="commentaires">Commentaires (optionnel)</label>
+                            <textarea id="commentaires" class="form-control" rows="2" placeholder="Ex : Possibilité de bagages, arrêts supplémentaires, etc."></textarea>
+                        </div>
+
                         <div class="form-group">
                             <label for="contact">Coordonnées (email/tél)</label>
                             <input type="text" id="contact" class="form-control" placeholder="Comment vous contacter ?" required>
                         </div>
+
                         <div class="form-group">
                             <label for="secret">Mot-clé secret</label>
                             <div class="input-with-info">

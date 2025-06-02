@@ -85,19 +85,78 @@ async def add_festival(request: Request):
 
 @app.get("/api/trajets/{festival_id}")
 async def get_trajets(festival_id: int):
-    with open(TRAJETS_FILE, "r", encoding="utf-8") as f:
-        trajets = json.load(f)
-    return [t for t in trajets if t["festival_id"] == festival_id]
+    try:
+        with open(TRAJETS_FILE, "r", encoding="utf-8") as f:
+            try:
+                trajets = json.load(f)
+            except json.JSONDecodeError:
+                return []
+                
+        # Filtrer les trajets par festival_id et formater la réponse
+        result = []
+        for trajet in trajets:
+            if trajet.get("festival_id") == festival_id:
+                # Créer une version formatée du trajet pour la réponse
+                trajet_formatte = {
+                    "id": trajet.get("id"),
+                    "type": trajet.get("type", "aller"),
+                    "adresses": trajet.get("adresses", []),
+                    "heures": trajet.get("heures", []),
+                    "places_par_arret": trajet.get("places_par_arret", []),
+                    "places_disponibles": trajet.get("places_disponibles", 0),
+                    "prix": trajet.get("prix", 0),
+                    "commentaires": trajet.get("commentaires", ""),
+                    "contact": trajet.get("contact", ""),
+                    "date_creation": trajet.get("date_creation", ""),
+                    "complet": trajet.get("complet", False)
+                }
+                result.append(trajet_formatte)
+                
+        return result
+        
+    except Exception as e:
+        print(f"Erreur lors de la récupération des trajets: {str(e)}")
+        return []
 
 @app.post("/api/trajets")
 async def add_trajet(request: Request):
     new_trajet = await request.json()
-    with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
-        trajets = json.load(f)
-        trajets.append(new_trajet)
-        f.seek(0)
-        json.dump(trajets, f, ensure_ascii=False, indent=4)
-    return {"message": "Trajet ajouté avec succès"}
+    
+    # Validation des champs requis
+    required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "secret"]
+    for field in required_fields:
+        if field not in new_trajet:
+            return {"error": f"Champ manquant: {field}"}, 400
+    
+    # Validation des tableaux de données
+    if len(new_trajet["adresses"]) < 2:
+        return {"error": "Au moins deux adresses sont nécessaires (départ et arrivée)"}, 400
+    
+    if len(new_trajet["adresses"]) != len(new_trajet["heures"]) or len(new_trajet["adresses"]) != len(new_trajet["places_par_arret"]):
+        return {"error": "Les tableaux d'adresses, d'heures et de places doivent avoir la même longueur"}, 400
+    
+    # Ajout d'un ID unique au trajet
+    new_trajet["id"] = str(uuid.uuid4())
+    new_trajet["date_creation"] = datetime.now().isoformat()
+    
+    # Lecture et mise à jour du fichier des trajets
+    try:
+        with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
+            try:
+                trajets = json.load(f)
+            except json.JSONDecodeError:
+                trajets = []
+                
+            trajets.append(new_trajet)
+            f.seek(0)
+            json.dump(trajets, f, ensure_ascii=False, indent=4)
+            f.truncate()
+            
+        return {"message": "Trajet ajouté avec succès", "id": new_trajet["id"]}
+        
+    except Exception as e:
+        print(f"Erreur lors de l'ajout du trajet: {str(e)}")
+        return {"error": f"Erreur lors de l'ajout du trajet: {str(e)}"}, 500
 
 @app.put("/api/trajets/{festival_id}/complet")
 async def mark_complet(festival_id: int, request: Request):
