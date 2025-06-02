@@ -67,16 +67,25 @@ if (!chatMessages || !chatForm || !chatInput) {
             const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
             socket = new WebSocket(`${protocol}${window.location.host}/ws`);
             
+            let isFirstMessage = true;
+            
             socket.onopen = () => {
                 console.log('Connecté au chat');
                 reconnectAttempts = 0; // Réinitialiser le compteur de reconnexion
                 showChatStatus('Connecté', 'success');
                 
+                // Ne pas envoyer de message vide au chargement
+                if (isFirstMessage) {
+                    isFirstMessage = false;
+                    return;
+                }
+                
                 // Envoyer le nom d'utilisateur actuel au serveur
                 if (socket.readyState === WebSocket.OPEN) {
                     socket.send(JSON.stringify({
                         username: username,
-                        type: 'set_username'
+                        type: 'set_username',
+                        isSystem: true // Indique que c'est un message système
                     }));
                 }
             };
@@ -138,8 +147,7 @@ if (!chatMessages || !chatForm || !chatInput) {
         if (newUsername && newUsername !== username) {
             username = newUsername;
             localStorage.setItem('chatUsername', username);
-            // Envoyer un message système pour informer du changement de nom
-            addMessage('Système', `${username} a rejoint la conversation`, new Date().toISOString());
+            // Ne pas envoyer de message système ici pour éviter les messages en double
         }
     }
     
@@ -148,6 +156,7 @@ if (!chatMessages || !chatForm || !chatInput) {
         e.preventDefault();
         
         const message = chatInput ? chatInput.value.trim() : '';
+        if (!message) return; // Ne pas envoyer de message vide
         
         // Mettre à jour le nom d'utilisateur si modifié
         if (chatUsername) {
@@ -157,8 +166,6 @@ if (!chatMessages || !chatForm || !chatInput) {
                 localStorage.setItem('chatUsername', username);
             }
         }
-        
-        if (!message) return;
         
         if (socket && socket.readyState === WebSocket.OPEN) {
             try {
