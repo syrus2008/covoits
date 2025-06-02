@@ -417,30 +417,55 @@ async function loadTrajets(festival_id) {
                         <div class="trajet-footer">
                             <div class="trajet-meta">
                                 <div class="trajet-contact">
-                                    <i class="fas fa-${trajet.contact && trajet.contact.includes('@') ? 'envelope' : 'phone'}"></i>
-                                    ${trajet.contact || 'Contact non fourni'}
-                                </div>
-                                <div class="trajet-date">
-                                    <i class="far fa-clock"></i>
-                                    Posté le ${new Date(trajet.date_creation).toLocaleDateString('fr-FR')}
-                                </div>
+                                <i class="fas fa-user"></i>
+                                Conducteur
+                            </div>
+                            <div class="trajet-date">
+                                <i class="far fa-clock"></i>
+                                Posté le ${new Date(trajet.date_creation).toLocaleDateString('fr-FR')}
+                            </div>
+                            <div class="trajet-contact-info" style="display: none;">
+                                <i class="fas fa-${trajet.contact && trajet.contact.includes('@') ? 'envelope' : 'phone'}"></i>
+                                ${trajet.contact || 'Contact non fourni'}
+                            </div>
                             </div>
                             
                             <div class="trajet-actions">
-                                <button class="btn btn-sm btn-primary" onclick="openContactForm('${trajet.conducteur_id || 'unknown'}', '${trajet.id}')">
-                                    <i class="fas fa-envelope"></i> Contacter
+                        <button class="btn btn-sm btn-primary" onclick="openContactForm('${trajet.conducteur_id || 'unknown'}', '${trajet.id}')">
+                            <i class="fas fa-envelope"></i> Contacter
+                        </button>
+                        <div class="trajet-secret-form" id="secret-form-${trajet.id}" style="display: none; margin-top: 10px;">
+                            <input type="password" id="secret-input-${trajet.id}" class="form-control form-control-sm" placeholder="Mot-clé secret" style="margin-bottom: 5px;">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary" onclick="confirmMarkComplet(${festival_id}, '${trajet.id}')">
+                                    <i class="fas fa-check-double"></i> Confirmer
                                 </button>
-                                <button class="btn btn-sm ${isComplet ? 'btn-outline' : 'btn-primary'}" 
-                                        onclick="event.preventDefault(); markComplet(${festival_id}, '${trajet.id}')" 
-                                        ${isComplet ? 'disabled' : ''}>
-                                    <i class="fas fa-${isComplet ? 'check' : 'check-double'}"></i>
-                                    ${isComplet ? 'Complet' : 'Marquer complet'}
+                                <button class="btn btn-sm btn-outline" onclick="event.preventDefault(); document.getElementById('secret-form-${trajet.id}').style.display = 'none';">
+                                    <i class="fas fa-times"></i> Annuler
                                 </button>
-                                <button class="btn btn-sm btn-outline" 
-                                        onclick="event.preventDefault(); deleteTrajet(${festival_id}, '${trajet.id}')">
-                                    <i class="fas fa-trash"></i>
-                                    Supprimer
+                            </div>
+                        </div>
+                        <button class="btn btn-sm ${isComplet ? 'btn-outline' : 'btn-primary'}" 
+                                onclick="event.preventDefault(); showSecretForm('${trajet.id}', 'mark')" 
+                                ${isComplet ? 'disabled' : ''}>
+                            <i class="fas fa-${isComplet ? 'check' : 'check-double'}"></i>
+                            ${isComplet ? 'Complet' : 'Marquer complet'}
+                        </button>
+                        <div class="trajet-secret-form" id="delete-form-${trajet.id}" style="display: none; margin-top: 10px;">
+                            <input type="password" id="delete-secret-${trajet.id}" class="form-control form-control-sm" placeholder="Mot-clé secret" style="margin-bottom: 5px;">
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-danger" onclick="confirmDeleteTrajet(${festival_id}, '${trajet.id}')">
+                                    <i class="fas fa-trash"></i> Confirmer
                                 </button>
+                                <button class="btn btn-sm btn-outline" onclick="event.preventDefault(); document.getElementById('delete-form-${trajet.id}').style.display = 'none';">
+                                    <i class="fas fa-times"></i> Annuler
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-sm btn-outline" 
+                                onclick="event.preventDefault(); showSecretForm('${trajet.id}', 'delete')">
+                            <i class="fas fa-trash"></i> Supprimer
+                        </button>
                             </div>
                         </div>
                     </div>
@@ -449,6 +474,24 @@ async function loadTrajets(festival_id) {
 
         html += '</div>'; // Fermeture de .trajets-list
         trajetsContainer.innerHTML = html;
+        
+        // Ajouter les écouteurs d'événements pour afficher/masquer les contacts
+        document.querySelectorAll('.trajet-contact').forEach(contactEl => {
+            contactEl.addEventListener('click', (e) => {
+                e.preventDefault();
+                const contactInfo = contactEl.nextElementSibling;
+                if (contactInfo && contactInfo.classList.contains('trajet-contact-info')) {
+                    contactEl.classList.toggle('active');
+                    
+                    // Fermer les autres infos de contact ouvertes
+                    document.querySelectorAll('.trajet-contact').forEach(otherContact => {
+                        if (otherContact !== contactEl && otherContact.classList.contains('active')) {
+                            otherContact.classList.remove('active');
+                        }
+                    });
+                }
+            });
+        });
 
         // Ajouter l'événement pour afficher le formulaire
         const showFormBtn = document.getElementById('show-trajet-form');
@@ -545,6 +588,81 @@ function genererEtapesTrajet(trajet) {
     }
     
     return html;
+}
+
+// Fonction pour afficher le formulaire de mot-clé
+function showSecretForm(trajetId, action) {
+    // Masquer tous les autres formulaires ouverts
+    document.querySelectorAll('.trajet-secret-form').forEach(form => {
+        form.style.display = 'none';
+    });
+    
+    // Afficher le formulaire correspondant à l'action
+    if (action === 'mark') {
+        document.getElementById(`secret-form-${trajetId}`).style.display = 'block';
+    } else if (action === 'delete') {
+        document.getElementById(`delete-form-${trajetId}`).style.display = 'block';
+    }
+}
+
+// Fonction pour confirmer le marquage comme complet
+async function confirmMarkComplet(festival_id, trajetId) {
+    const secret = document.getElementById(`secret-input-${trajetId}`).value;
+    if (!secret) {
+        showNotification('Veuillez entrer le mot-clé secret', 'error');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/trajets/${festival_id}/complet`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ index: trajetId, secret })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+            showNotification(result.error, 'error');
+        } else {
+            showNotification('Trajet marqué comme complet avec succès', 'success');
+            loadTrajets(festival_id);
+        }
+    } catch (error) {
+        console.error('Erreur lors du marquage comme complet:', error);
+        showNotification('Une erreur est survenue', 'error');
+    }
+}
+
+// Fonction pour confirmer la suppression d'un trajet
+async function confirmDeleteTrajet(festival_id, trajetId) {
+    const secret = document.getElementById(`delete-secret-${trajetId}`).value;
+    if (!secret) {
+        showNotification('Veuillez entrer le mot-clé secret', 'error');
+        return;
+    }
+    
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce trajet ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/trajets/${festival_id}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ index: trajetId, secret })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+            showNotification(result.error, 'error');
+        } else {
+            showNotification('Trajet supprimé avec succès', 'success');
+            loadTrajets(festival_id);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression du trajet:', error);
+        showNotification('Une erreur est survenue lors de la suppression', 'error');
+    }
 }
 
 // Fonction pour contacter le conducteur
