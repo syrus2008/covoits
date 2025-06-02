@@ -860,6 +860,12 @@ function setupTrajetForm() {
         ajouterArretBtn.addEventListener('click', ajouterArretIntermediaire);
     }
 
+    // Initialiser le formulaire au chargement
+    initializeForm().catch(error => {
+        console.error('Erreur lors de l\'initialisation du formulaire:', error);
+        showNotification('Erreur lors du chargement des détails du festival', 'error');
+    });
+
     // Charger les détails du festival pour la date
     async function loadFestivalDetails() {
         const festivalId = new URLSearchParams(window.location.search).get('id');
