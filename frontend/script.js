@@ -120,23 +120,29 @@ function createFestivalCard(festival, index, isPast = false) {
         // Vérifier si l'image existe, sinon utiliser une image par défaut
         const imageUrl = festival.image ? `/images/${festival.image}` : '/images/default-festival.jpg';
         
+        // Créer la structure HTML de la carte
         card.innerHTML = `
             <div class="festival-image">
-                <img src="${imageUrl}" alt="${festival.nom || 'Festival'}" 
-                     onerror="this.src='/images/default-festival.jpg';">
-                ${isPast ? '<div class="past-badge">Terminé</div>' : ''}
+                <img src="${imageUrl}" 
+                     alt="${festival.nom || 'Festival'}" 
+                     onerror="this.onerror=null; this.src='/images/default-festival.jpg'">
+                ${isPast ? '<span class="past-badge">Terminé</span>' : ''}
             </div>
             <div class="festival-content">
                 <h3>${festival.nom || 'Festival sans nom'}</h3>
-                <p class="festival-date">
-                    <i class="far fa-calendar-alt"></i> ${formattedDate}
-                </p>
-                ${festival.lieu ? `<p class="festival-location">
-                    <i class="fas fa-map-marker-alt"></i> ${festival.lieu}
-                </p>` : ''}
-                ${festival.description ? `<p class="festival-description">
+                <div class="festival-meta">
+                    <p class="festival-date">
+                        <i class="far fa-calendar-alt"></i> ${formattedDate}
+                    </p>
+                    ${festival.lieu ? `
+                    <p class="festival-location">
+                        <i class="fas fa-map-marker-alt"></i> ${festival.lieu}
+                    </p>` : ''}
+                </div>
+                ${festival.description ? `
+                <div class="festival-description">
                     ${festival.description}
-                </p>` : ''}
+                </div>` : ''}
                 <div class="festival-actions">
                     <a href="/static/festival.html?id=${festival.id || ''}" class="btn btn-primary">
                         Voir les trajets <i class="fas fa-arrow-right"></i>
