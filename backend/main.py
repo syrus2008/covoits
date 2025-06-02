@@ -476,43 +476,55 @@ async def contact_request(contact: ContactRequest):
         driver_email_html = await load_email_template('driver_notification', driver_context)
         passenger_email_html = await load_email_template('passenger_confirmation', passenger_context)
         
-        # Envoyer les emails
+        # Envoyer les emails avec un délai entre chaque envoi
         email_sent = True
         
-        # Email au conducteur
+        # Fonction pour envoyer un email avec gestion des erreurs
+        async def safe_send_email(recipient, subject, body, is_html=False, recipient_type=""):
+            try:
+                print(f"Tentative d'envoi d'email à {recipient_type}: {recipient}")
+                success = await send_email(
+                    recipient_email=recipient,
+                    subject=subject,
+                    body=body,
+                    is_html=is_html
+                )
+                if success:
+                    print(f"Email envoyé avec succès à {recipient_type}: {recipient}")
+                else:
+                    print(f"Échec de l'envoi de l'email à {recipient_type}: {recipient}")
+                return success
+            except Exception as e:
+                print(f"Erreur lors de l'envoi de l'email à {recipient_type} {recipient}: {str(e)}")
+                return False
+        
+        # Envoyer d'abord l'email au conducteur
         driver_email_sent = False
         if trajet.get('contact_email'):
-            try:
-                driver_email_sent = await send_email(
-                    recipient_email=trajet['contact_email'],
-                    subject=f"[Covoiturage Festival] Nouvelle demande pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !",
-                    body=driver_email_html,
-                    is_html=True
-                )
-                if driver_email_sent:
-                    print(f"Email de notification envoyé au conducteur: {trajet['contact_email']}")
-                else:
-                    print(f"Échec de l'envoi de l'email au conducteur: {trajet['contact_email']}")
-            except Exception as e:
-                print(f"Erreur lors de l'envoi de l'email au conducteur: {str(e)}")
+            driver_subject = f"[Covoiturage Festival] Nouvelle demande pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !"
+            driver_email_sent = await safe_send_email(
+                recipient=trajet['contact_email'],
+                subject=driver_subject,
+                body=driver_email_html,
+                is_html=True,
+                recipient_type="conducteur"
+            )
+            # Attendre un court instant avant d'envoyer le prochain email
+            import asyncio
+            await asyncio.sleep(2)  # Pause de 2 secondes
         else:
             print("Aucune adresse email de conducteur trouvée pour l'envoi de la notification")
         
-        # Email de confirmation au passager (toujours envoyé)
-        try:
-            passenger_email_sent = await send_email(
-                recipient_email=contact.email,
-                subject=f"[Covoiturage Festival] Confirmation de votre demande ({contact.places_demandees} place(s))",
-                body=passenger_email_html,
-                is_html=True
-            )
-            if passenger_email_sent:
-                print(f"Email de confirmation envoyé au passager: {contact.email}")
-            else:
-                print(f"Échec de l'envoi de l'email de confirmation au passager: {contact.email}")
-                email_sent = False
-        except Exception as e:
-            print(f"Erreur lors de l'envoi de l'email de confirmation au passager: {str(e)}")
+        # Ensuite, envoyer l'email de confirmation au passager
+        passenger_email_sent = await safe_send_email(
+            recipient=contact.email,
+            subject=f"[Covoiturage Festival] Confirmation de votre demande ({contact.places_demandees} place(s))",
+            body=passenger_email_html,
+            is_html=True,
+            recipient_type="passager"
+        )
+        
+        if not passenger_email_sent:
             email_sent = False
         
         if not email_sent:
