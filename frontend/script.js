@@ -1061,6 +1061,7 @@ function setupTrajetForm() {
 
             console.log('Données du trajet à envoyer:', trajetData);
 
+            console.log('Envoi des données du trajet au serveur...');
             // Envoyer les données au serveur
             const response = await fetch('/api/trajets', {
                 method: 'POST',
@@ -1070,10 +1071,14 @@ function setupTrajetForm() {
                 body: JSON.stringify(trajetData)
             });
 
+            const responseData = await response.json().catch(() => ({}));
+            
             if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.detail || 'Erreur lors de l\'ajout du trajet');
+                console.error('Erreur serveur:', response.status, responseData);
+                throw new Error(responseData.error || `Erreur ${response.status}: ${response.statusText}`);
             }
+            
+            console.log('Réponse du serveur:', responseData);
             
             // Réinitialiser le formulaire
             form.reset();
