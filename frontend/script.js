@@ -377,13 +377,13 @@ async function loadTrajets(festival_id) {
                                         onclick="contacterConducteur('${trajet.contact || ''}')">
                                     <i class="fas fa-envelope"></i> Contacter
                                 </button>
-                                <button class="btn btn-sm ${isComplet ? 'btn-secondary' : 'btn-success'}" 
+                                <button class="btn btn-sm ${isComplet ? 'btn-outline' : 'btn-primary'}" 
                                         onclick="event.preventDefault(); markComplet(${festival_id}, '${trajet.id}')" 
                                         ${isComplet ? 'disabled' : ''}>
                                     <i class="fas fa-${isComplet ? 'check' : 'check-double'}"></i>
                                     ${isComplet ? 'Complet' : 'Marquer complet'}
                                 </button>
-                                <button class="btn btn-sm btn-danger" 
+                                <button class="btn btn-sm btn-outline" 
                                         onclick="event.preventDefault(); deleteTrajet(${festival_id}, '${trajet.id}')">
                                     <i class="fas fa-trash"></i>
                                     Supprimer

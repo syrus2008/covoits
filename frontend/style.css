@@ -98,6 +98,96 @@
     line-height: 1.6;
 }
 
+/* Styles des boutons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    white-space: nowrap;
+    line-height: 1.5;
+}
+
+/* Bouton principal */
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover, .btn-primary:focus {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    outline: none;
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Bouton contour */
+.btn-outline {
+    background-color: transparent;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline:hover, .btn-outline:focus {
+    background-color: rgba(74, 111, 165, 0.05);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+.btn-outline:active {
+    background-color: rgba(74, 111, 165, 0.1);
+}
+
+/* Bouton désactivé */
+.btn:disabled, .btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Taille réduite */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+/* Bouton avec icône */
+.btn i {
+    font-size: 0.9em;
+}
+
+/* Bouton plein écran sur mobile */
+@media (max-width: 480px) {
+    .btn {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .btn-sm {
+        padding: 4px 10px;
+        font-size: 0.8rem;
+    }
+}
+
 /* Styles de base */
 :root {
     --primary-color: #4a6fa5;
@@ -193,11 +283,11 @@ h1::after {
 /* Grille des festivals */
 #festivals {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 25px;
     margin: 30px 0;
     width: 100%;
-    max-width: 1400px;
+    max-width: 1600px;
     margin-left: auto;
     margin-right: auto;
     padding: 0 20px;
@@ -208,16 +298,37 @@ h1::after {
     background: white;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e0e0e0;
+    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
     height: 100%;
+    position: relative;
+}
+
+.festival-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 
 .festival-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
+}
+
+.festival-card:hover::before {
+    opacity: 0.5;
 }
 
 .festival-image {
@@ -313,22 +424,24 @@ h1::after {
 }
 
 /* Responsive */
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
     #festivals {
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
+        max-width: 1200px;
+    }
+}
+
+@media (max-width: 992px) {
+    #festivals {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 800px;
     }
 }
 
 @media (max-width: 768px) {
     #festivals {
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 20px;
-    }
-}
-
-@media (max-width: 576px) {
-    #festivals {
         grid-template-columns: 1fr;
+        max-width: 500px;
         gap: 20px;
     }
 }
@@ -819,52 +932,147 @@ select:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.2);
 }
-/* Boutons et liens */
-a, button, .btn {
-    display: inline-block;
-    padding: 12px 24px;
-    background-color: var(--primary-color);
-    color: white;
-    text-decoration: none;
-    border: none;
-    border-radius: 6px;
+/* Styles de base pour les boutons et liens */
+button, 
+input[type="button"], 
+input[type="submit"],
+input[type="reset"],
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 20px;
     font-size: 1rem;
     font-weight: 500;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.3s ease;
-    text-align: center;
-}
-
-a:hover, button:hover, .btn:hover {
-    background-color: #3a5a80;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-button:disabled {
-    background-color: #cccccc;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
-}
-
-.btn-outline {
-    background-color: transparent;
-    border: 2px solid var(--primary-color);
-    color: var(--primary-color);
-}
-
-.btn-outline:hover {
+    border: 2px solid transparent;
+    white-space: nowrap;
+    line-height: 1.5;
     background-color: var(--primary-color);
     color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* États des boutons */
+button:hover:not(:disabled),
+input[type="button"]:hover:not(:disabled),
+input[type="submit"]:hover:not(:disabled),
+input[type="reset"]:hover:not(:disabled),
+.btn:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+button:active:not(:disabled),
+input[type="button"]:active:not(:disabled),
+input[type="submit"]:active:not(:disabled),
+input[type="reset"]:active:not(:disabled),
+.btn:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+button:focus:not(:disabled),
+input[type="button"]:focus:not(:disabled),
+input[type="submit"]:focus:not(:disabled),
+input[type="reset"]:focus:not(:disabled),
+.btn:focus:not(:disabled) {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(74, 111, 165, 0.3);
+}
+
+/* Bouton désactivé */
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled,
+.btn:disabled,
+.btn[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Style pour les boutons outline */
+.btn-outline {
+    background-color: transparent;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background-color: rgba(74, 111, 165, 0.1);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+/* Style pour les boutons de danger */
 .btn-danger {
     background-color: #dc3545;
+    border-color: #dc3545;
 }
 
-.btn-danger:hover {
-    background-color: #bd2130;
+.btn-danger:hover:not(:disabled) {
+    background-color: #c82333;
+    border-color: #bd2130;
+}
+
+/* Style pour les boutons secondaires */
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+/* Style pour les boutons de succès */
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover:not(:disabled) {
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+/* Taille réduite pour les boutons */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.85rem;
+}
+
+/* Bouton avec icône */
+.btn i {
+    font-size: 0.9em;
+}
+
+/* Bouton plein écran sur mobile */
+@media (max-width: 480px) {
+    button, 
+    input[type="button"], 
+    input[type="submit"],
+    input[type="reset"],
+    .btn {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+    
+    .btn-sm {
+        padding: 4px 10px;
+        font-size: 0.8rem;
+    }
 }
 nav ul {
     list-style: none;
@@ -886,6 +1094,78 @@ nav ul li a {
 }
 nav ul li a:hover {
     background-color: #575757;
+}
+
+/* Styles spécifiques pour les boutons de formulaire */
+.chat-submit {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.chat-submit:hover:not(:disabled) {
+    background-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.chat-submit:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Bouton de notification */
+.notification-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 5px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.notification-close:hover {
+    color: #333;
+}
+
+/* Bouton ajouter un arrêt */
+#ajouter-arret {
+    width: 100%;
+    margin: 10px 0 20px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border: 2px dashed #ccc;
+    color: #666;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+#ajouter-arret:hover:not(:disabled) {
+    background-color: #e9ecef;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+#ajouter-arret i {
+    font-size: 1rem;
 }
 
 /* Navigation */
