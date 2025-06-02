@@ -116,6 +116,11 @@ async function openContactModal(driverId, trajetId) {
             if (response.ok) {
                 showNotification('Votre demande a été envoyée avec succès !', 'success');
                 modal.remove();
+                
+                // Recharger la liste des trajets pour mettre à jour les places disponibles
+                if (currentFestivalId) {
+                    await loadTrajets(currentFestivalId);
+                }
             } else {
                 const error = await response.json();
                 throw new Error(error.detail || 'Une erreur est survenue');

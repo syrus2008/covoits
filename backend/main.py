@@ -62,6 +62,15 @@ class ContactRequest(BaseModel):
     name: str
     email: str
     message: Optional[str] = None
+    places_demandees: int = 1
+
+class ReserverRequest(BaseModel):
+    driverId: str
+    trajetId: str
+    name: str
+    email: str
+    phone: str
+    message: Optional[str] = None
     places_demandees: int = 1  # Nombre de places demandées par le passager
 
 class ContactResponse(BaseModel):
@@ -501,7 +510,7 @@ async def contact_request(contact: ContactRequest):
         # Envoyer d'abord l'email au conducteur
         driver_email_sent = False
         if trajet.get('contact_email'):
-            driver_subject = f"[Covoiturage Festival] Nouvelle demande pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !"
+            driver_subject = f"[Covoiturage Festival] Nouvelle réservation pour votre trajet ({places_restantes} place(s) restante(s))" if places_restantes > 0 else "[Covoiturage Festival] Votre trajet est maintenant complet !"
             driver_email_sent = await safe_send_email(
                 recipient=trajet['contact_email'],
                 subject=driver_subject,
@@ -518,7 +527,7 @@ async def contact_request(contact: ContactRequest):
         # Ensuite, envoyer l'email de confirmation au passager
         passenger_email_sent = await safe_send_email(
             recipient=contact.email,
-            subject=f"[Covoiturage Festival] Confirmation de votre demande ({contact.places_demandees} place(s))",
+            subject=f"[Covoiturage Festival] Confirmation de votre réservation ({contact.places_demandees} place(s))",
             body=passenger_email_html,
             is_html=True,
             recipient_type="passager"
@@ -538,6 +547,30 @@ async def contact_request(contact: ContactRequest):
     except Exception as e:
         print(f"Erreur lors de l'envoi de la demande de contact: {str(e)}")
         raise HTTPException(status_code=500, detail="Une erreur est survenue lors de l'envoi de votre demande")
+
+# Route pour la réservation de place
+@app.post("/api/reserver", response_model=ContactResponse)
+async def reserver_place(reservation: ReserverRequest):
+    try:
+        # Convertir la réservation en demande de contact pour réutiliser la même logique
+        contact = ContactRequest(
+            driverId=reservation.driverId,
+            trajetId=reservation.trajetId,
+            name=reservation.name,
+            email=reservation.email,
+            message=reservation.message,
+            places_demandees=reservation.places_demandees
+        )
+        
+        # Appeler la fonction contact_request avec les données de la réservation
+        return await contact_request(contact)
+        
+    except HTTPException as he:
+        print(f"Erreur HTTP: {str(he)}")
+        raise
+    except Exception as e:
+        print(f"Erreur lors du traitement de la réservation: {str(e)}")
+        raise HTTPException(status_code=500, detail="Une erreur est survenue lors du traitement de votre réservation")
 
 # Route WebSocket pour le chat"
 @app.websocket("/ws")
