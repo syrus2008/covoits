@@ -100,12 +100,33 @@ if (!chatMessages || !chatForm || !chatInput) {
     // Démarrer la connexion WebSocket
     connectWebSocket();
     
+    // Récupérer ou initialiser le nom d'utilisateur
+    if (chatUsername) {
+        // Récupérer le nom d'utilisateur depuis le stockage local s'il existe
+        const savedUsername = localStorage.getItem('chatUsername');
+        if (savedUsername) {
+            chatUsername.value = savedUsername;
+        }
+        
+        // Sauvegarder le nom d'utilisateur lorsqu'il est modifié
+        chatUsername.addEventListener('change', () => {
+            if (chatUsername.value.trim()) {
+                localStorage.setItem('chatUsername', chatUsername.value.trim());
+            }
+        });
+    }
+    
     // Envoi d'un message
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
         const username = (chatUsername && chatUsername.value) ? chatUsername.value.trim() : 'Anonyme';
         const message = chatInput ? chatInput.value.trim() : '';
+        
+        // Sauvegarder le nom d'utilisateur dans le stockage local
+        if (username && username !== 'Anonyme') {
+            localStorage.setItem('chatUsername', username);
+        }
         
         if (message && socket && socket.readyState === WebSocket.OPEN) {
             try {
