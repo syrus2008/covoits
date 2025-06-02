@@ -23,7 +23,28 @@ class ConnectionManager:
         self.user_names: Dict[WebSocket, str] = {}
         self.chat_history: List[dict] = []
         self.chat_history_file = "backend/data/chat_history.json"
+        self.forbidden_usernames = [
+            'admin', 'administrateur', 'modo', 'moderator', 'modérateur', 'sysadmin',
+            'root', 'system', 'server', 'bot', 'staff', 'support', 'help', 'service',
+            'assistance', 'webmaster', 'modération', 'moderacion', 'moderazione',
+            'moderator', 'moderatore', 'админ', 'модератор', '管理员', '管理者',
+            '운영자', '관리자', '管理者', 'モデレーター'
+        ]
         self._load_chat_history()
+    
+    def is_username_forbidden(self, username: str) -> bool:
+        """Vérifie si un nom d'utilisateur contient des termes interdits"""
+        if not username:
+            return False
+        lower_username = username.lower()
+        return any(
+            term in lower_username or 
+            lower_username == term or
+            lower_username.startswith(f"{term}_") or
+            lower_username.endswith(f"_{term}") or
+            f"_{term}_" in lower_username
+            for term in self.forbidden_usernames
+        )
     
     def _load_chat_history(self):
         try:
@@ -45,10 +66,27 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, username: str = None):
         await websocket.accept()
         self.active_connections.append(websocket)
-        username = username or f"User-{len(self.active_connections)}"
+        
+        # Vérifier si le nom d'utilisateur est valide
+        if username and self.is_username_forbidden(username):
+            await websocket.send_json({
+                "type": "error",
+                "message": "Ce nom d'utilisateur n'est pas autorisé"
+            })
+            username = None
+        
+        # Générer un nom d'utilisateur par défaut si nécessaire
+        if not username or self.is_username_forbidden(username):
+            username = f"User-{len(self.active_connections)}"
+        
         self.user_names[websocket] = username
+        
         # Envoyer l'historique au nouveau connecté
-        await websocket.send_json({"type": "history", "messages": self.chat_history})
+        await websocket.send_json({
+            "type": "history", 
+            "messages": self.chat_history,
+            "username": username  # Envoyer le nom d'utilisateur assigné
+        })
         return username
 
     def disconnect(self, websocket: WebSocket):
@@ -100,8 +138,19 @@ async def websocket_endpoint(websocket: WebSocket):
             if "username" in message_data and message_data["username"].strip():
                 new_username = message_data["username"].strip()
                 if new_username != username:
-                    username = new_username
-                    manager.user_names[websocket] = username
+                    if manager.is_username_forbidden(new_username):
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Ce nom d'utilisateur n'est pas autorisé"
+                        })
+                    else:
+                        username = new_username
+                        manager.user_names[websocket] = username
+                        # Informer l'utilisateur que le nom a été mis à jour
+                        await websocket.send_json({
+                            "type": "info",
+                            "message": f"Votre nom d'utilisateur est maintenant {username}"
+                        })
             
             # Créer le message
             message = {
