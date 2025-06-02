@@ -1,6 +1,0 @@
-Dépose ici les images d'affiches, par exemple:
-- tomorrowland.jpg
-- esperanzah.jpg
-- graspop.jpg
-- etc...
-Ces images doivent correspondre aux noms dans festivals.json
