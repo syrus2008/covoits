@@ -2,10 +2,26 @@
 let currentFestivalId = null;
 
 // Fonction pour ouvrir la modale de contact
-function openContactModal(driverId, trajetId) {
+async function openContactModal(driverId, trajetId) {
     // Créer la modale
     const modal = document.createElement('div');
     modal.className = 'contact-modal';
+    
+    // Récupérer les détails du trajet pour obtenir le nombre de places disponibles
+    let placesDisponibles = 1;
+    try {
+        const response = await fetch(`/api/trajets`);
+        if (response.ok) {
+            const trajets = await response.json();
+            const trajet = trajets.find(t => t.id === trajetId);
+            if (trajet) {
+                placesDisponibles = trajet.places_disponibles || 1;
+            }
+        }
+    } catch (error) {
+        console.error('Erreur lors de la récupération des détails du trajet:', error);
+    }
+    
     modal.innerHTML = `
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -27,6 +43,15 @@ function openContactModal(driverId, trajetId) {
                            pattern="^\\+[0-9]{1,3}[0-9]{8,15}$" 
                            title="Format: +indicatifnuméro (ex: +3248420010)" 
                            required>
+                </div>
+                <div class="form-group">
+                    <label for="contactPlaces">Nombre de places demandées*</label>
+                    <input type="number" id="contactPlaces" 
+                           min="1" 
+                           max="${placesDisponibles}" 
+                           value="1" 
+                           required>
+                    <small class="form-text text-muted">Places disponibles: <span id="places-available">${placesDisponibles}</span></small>
                 </div>
                 <div class="form-group">
                     <label for="contactMessage">Message (facultatif)</label>
@@ -52,12 +77,22 @@ function openContactModal(driverId, trajetId) {
     form.onsubmit = async (e) => {
         e.preventDefault();
         
+        const placesDemandees = parseInt(document.getElementById('contactPlaces').value);
+        const placesDisponibles = parseInt(document.getElementById('places-available').textContent);
+        
+        // Validation du nombre de places demandées
+        if (placesDemandees < 1 || placesDemandees > placesDisponibles) {
+            showNotification(`Veuillez sélectionner entre 1 et ${placesDisponibles} places.`, 'error');
+            return;
+        }
+        
         const formData = {
             driverId: document.getElementById('driverId').value,
             trajetId: document.getElementById('trajetId').value,
             name: document.getElementById('contactName').value,
             email: document.getElementById('contactEmail').value,
             phone: document.getElementById('contactPhone').value,
+            places_demandees: placesDemandees,
             message: document.getElementById('contactMessage').value
         };
 
