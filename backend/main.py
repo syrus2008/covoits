@@ -797,8 +797,9 @@ async def add_trajet(request: Request):
         # S'assurer que la date est au bon format
         new_trajet["date_trajet"] = trajet_date.isoformat()
         
-        # Ajout de l'ID du conducteur (généré de manière aléatoire)
+        # Ajout de l'ID du conducteur (généré de manière aléatoire) et sauvegarde de l'email
         new_trajet["conducteur_id"] = str(uuid.uuid4())
+        new_trajet["contact_email"] = new_trajet["contact"]  # Sauvegarder l'email du conducteur
         
         # Utiliser un chemin absolu pour le fichier de trajets
         trajets_file = "backend/data/trajets.json"
