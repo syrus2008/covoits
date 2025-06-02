@@ -1,8 +1,15 @@
+import os
+import json
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 import json
 import os
@@ -168,34 +175,82 @@ async def read_index():
     return HTMLResponse(content=content, headers=headers)
 
 # Fonction pour envoyer un email
-async def send_email(recipient_email: str, subject: str, body: str):
-    if not EMAIL_CONFIG["smtp_password"]:
-        # En développement, on peut juste logger l'email au lieu de l'envoyer
-        print(f"\n=== EMAIL NON ENVOYÉ (pas de mot de passe configuré) ===")
-        print(f"À: {recipient_email}")
-        print(f"Sujet: {subject}")
-        print(f"Corps:\n{body}\n")
-        return True
-        
+async def load_email_template(template_name: str, context: dict) -> str:
+    """Charge un template d'email et remplace les variables."""
     try:
+        template_path = os.path.join('backend', 'email_templates', f"{template_name}.html")
+        with open(template_path, 'r', encoding='utf-8') as file:
+            content = file.read()
+            
+        # Remplacement des variables du template
+        for key, value in context.items():
+            placeholder = '{{ ' + key + ' }}'
+            content = content.replace(placeholder, str(value))
+            
+        return content
+    except Exception as e:
+        print(f"Erreur lors du chargement du template {template_name}: {str(e)}")
+        # Retourne un template par défaut en cas d'erreur
+        default_template = """
+        <!DOCTYPE html>
+        <html>
+        <body>
+            <h2>{{ subject }}</h2>
+            <div>{{ message }}</div>
+        </body>
+        </html>
+        """
+        return default_template.replace('{{ subject }}', 'Notification')\
+                                 .replace('{{ message }}', str(context.get('message', '')))
+
+async def send_email(recipient_email: str, subject: str, body: str, is_html: bool = False) -> bool:
+    """
+    Envoie un email.
+    
+    Args:
+        recipient_email: Adresse email du destinataire
+        subject: Sujet de l'email
+        body: Corps du message (peut être du texte brut ou HTML)
+        is_html: Si True, le corps est traité comme du HTML
+    """
+    try:
+        # Vérifier si les informations SMTP sont configurées
+        smtp_config = {
+            'smtp_server': os.getenv('SMTP_SERVER', 'smtp.gmail.com'),
+            'smtp_port': int(os.getenv('SMTP_PORT', 587)),
+            'smtp_username': os.getenv('SMTP_USERNAME', 'covoiturage.festival@gmail.com'),
+            'smtp_password': os.getenv('SMTP_PASSWORD', '')
+        }
+        
+        if not smtp_config['smtp_password']:
+            print("Avertissement: Aucun mot de passe SMTP configuré. L'email ne sera pas envoyé.")
+            print(f"Destinataire: {recipient_email}")
+            print(f"Sujet: {subject}")
+            print(f"Corps:\n{body}")
+            return False
+
         # Création du message
         message = MIMEMultipart()
-        message["From"] = EMAIL_CONFIG["sender_email"]
-        message["To"] = recipient_email
-        message["Subject"] = subject
+        message['From'] = smtp_config['smtp_username']
+        message['To'] = recipient_email
+        message['Subject'] = subject
         
-        # Corps du message
-        message.attach(MIMEText(body, "plain"))
+        # Ajout du corps du message
+        if is_html:
+            message.attach(MIMEText(body, 'html', 'utf-8'))
+        else:
+            message.attach(MIMEText(body, 'plain', 'utf-8'))
         
-        # Connexion au serveur SMTP et envoi de l'email
-        with smtplib.SMTP(EMAIL_CONFIG["smtp_server"], EMAIL_CONFIG["smtp_port"]) as server:
+        # Connexion au serveur SMTP
+        with smtplib.SMTP(smtp_config['smtp_server'], smtp_config['smtp_port']) as server:
             server.starttls()
-            server.login(EMAIL_CONFIG["smtp_username"], EMAIL_CONFIG["smtp_password"])
+            server.login(smtp_config['smtp_username'], smtp_config['smtp_password'])
             server.send_message(message)
             
+        print(f"Email envoyé avec succès à {recipient_email}")
         return True
     except Exception as e:
-        print(f"Erreur lors de l'envoi de l'email: {e}")
+        print(f"Erreur lors de l'envoi de l'email: {str(e)}")
         return False
 
 # Fonction pour charger les informations d'un trajet depuis le fichier JSON
@@ -217,76 +272,97 @@ async def load_trajet(trajet_id: str) -> Optional[Dict]:
 @app.post("/api/contact-request", response_model=ContactResponse)
 async def contact_request(contact: ContactRequest):
     try:
-        # Charger les informations du trajet
-        trajet = await load_trajet(contact.trajetId)
+        # Charger les informations du trajet depuis le fichier JSON
+        with open('backend/data/trajets.json', 'r', encoding='utf-8') as f:
+            try:
+                trajets = json.load(f)
+            except json.JSONDecodeError:
+                raise HTTPException(status_code=500, detail="Erreur de lecture des trajets")
+        
+        # Trouver le trajet correspondant
+        trajet = next((t for t in trajets if str(t.get('id')) == contact.trajetId), None)
         if not trajet:
             raise HTTPException(status_code=404, detail="Trajet non trouvé")
         
-        # Formater les informations du trajet
-        trajet_info = {
-            "id": trajet.get('id'),
-            "departure": trajet.get('depart', 'Ville de départ'),
-            "arrival": trajet.get('destination', 'Ville d\'arrivée'),
-            "date": trajet.get('date', 'Date non spécifiée'),
-            "places": trajet.get('places_disponibles', 1)
+        # Charger les informations du festival
+        with open('backend/data/festivals.json', 'r', encoding='utf-8') as f:
+            try:
+                festivals = json.load(f)
+                festival = next((f for f in festivals if f['id'] == trajet.get('festival_id')), {})
+            except (json.JSONDecodeError, StopIteration):
+                festival = {}
+        
+        # Formater les informations du trajet pour l'email
+        date_depart = trajet.get('date_trajet', '')
+        if date_depart:
+            try:
+                date_obj = datetime.strptime(date_depart, '%Y-%m-%d')
+                date_depart = date_obj.strftime('%d/%m/%Y')
+            except (ValueError, TypeError):
+                pass
+
+        # Préparer le contexte pour les templates d'email
+        driver_context = {
+            'festival_name': festival.get('nom', 'Non spécifié'),
+            'date_depart': date_depart,
+            'departure': trajet.get('adresses', [''])[0],
+            'arrival': festival.get('lieu', ''),
+            'passenger_name': contact.name,
+            'passenger_email': contact.email,
+            'passenger_message': contact.message or '',
+            'support_email': 'covoiturage.festival@gmail.com'
         }
-        
-        # Ici, vous pourriez charger les informations du conducteur depuis une base de données utilisateurs
-        # Pour l'instant, nous utilisons des valeurs par défaut
-        driver_info = {
-            "id": contact.driverId,
-            "name": trajet.get('conducteur', 'Conducteur'),
-            "email": f"conducteur-{contact.driverId}@example.com",
-            "phone": trajet.get('telephone', 'Non renseigné')
+
+        passenger_context = {
+            'passenger_name': contact.name,
+            'festival_name': festival.get('nom', 'Non spécifié'),
+            'date_depart': date_depart,
+            'departure': trajet.get('adresses', [''])[0],
+            'arrival': festival.get('lieu', ''),
+            'trip_type': 'Aller-retour' if trajet.get('aller_retour', False) else 'Aller simple',
+            'driver_name': trajet.get('contact', 'Non spécifié'),
+            'driver_phone': trajet.get('telephone', ''),
+            'driver_email': trajet.get('contact_email', ''),
+            'driver_message': trajet.get('message', ''),
+            'support_email': 'covoiturage.festival@gmail.com'
         }
+
+        # Charger les templates d'email
+        driver_email_html = await load_email_template('driver_notification', driver_context)
+        passenger_email_html = await load_email_template('passenger_confirmation', passenger_context)
+
+        # Envoyer les emails
+        email_sent = True
         
-        # Envoyer un email au conducteur
-        driver_subject = f"Nouvelle demande de covoiturage pour votre trajet"
-        driver_body = f"""
-        Bonjour {driver_info['name']},
+        # Email au conducteur
+        if trajet.get('contact_email'):
+            email_sent = await send_email(
+                recipient_email=trajet['contact_email'],
+                subject="[Covoiturage Festival] Nouvelle demande pour votre trajet",
+                body=driver_email_html,
+                is_html=True
+            )
         
-        Vous avez reçu une nouvelle demande de covoiturage pour votre trajet du {trajet_info['date']} 
-        de {trajet_info['departure']} à {trajet_info['arrival']}.
+        # Email de confirmation au passager
+        if email_sent:
+            email_sent = await send_email(
+                recipient_email=contact.email,
+                subject="[Covoiturage Festival] Confirmation de votre demande",
+                body=passenger_email_html,
+                is_html=True
+            )
         
-        Détails du passager :
-        - Nom : {contact.name}
-        - Email : {contact.email}
-        - Message : {contact.message or 'Aucun message supplémentaire'}
-        
-        Si vous acceptez cette demande, vous pouvez contacter directement le passager à l'adresse email fournie.
-        
-        Cordialement,
-        L'équipe Covoiturage Festival
-        """
-        
-        await send_email(driver_info["email"], driver_subject, driver_body)
-        
-        # Envoyer un accusé de réception au demandeur
-        requester_subject = "Votre demande de covoiturage a été envoyée"
-        requester_body = f"""
-        Bonjour {contact.name},
-        
-        Votre demande de covoiturage pour le trajet du {trajet_info['date']} 
-        de {trajet_info['departure']} à {trajet_info['arrival']} a bien été transmise au conducteur.
-        
-        Le conducteur a été notifié et vous contactera directement par email s'il accepte votre demande.
-        
-        Coordonnées du conducteur (uniquement si accepté) :
-        - Nom : {driver_info['name']}
-        - Téléphone : {driver_info['phone']}
-        
-        Merci d'utiliser notre service de covoiturage !
-        
-        Cordialement,
-        L'équipe Covoiturage Festival
-        """
-        
-        await send_email(contact.email, requester_subject, requester_body)
+        if not email_sent:
+            raise HTTPException(status_code=500, detail="Erreur lors de l'envoi des emails")
         
         return {"success": True, "message": "Votre demande a été envoyée avec succès"}
         
+    except HTTPException as he:
+        print(f"Erreur HTTP: {str(he)}")
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Erreur lors de l'envoi de la demande de contact: {str(e)}")
+        raise HTTPException(status_code=500, detail="Une erreur est survenue lors de l'envoi de votre demande")
 
 # Route WebSocket pour le chat"
 @app.websocket("/ws")

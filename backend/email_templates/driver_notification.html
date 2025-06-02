@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Nouvelle demande de covoiturage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #777;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Nouvelle demande de covoiturage</h2>
+    </div>
+    <div class="content">
+        <p>Bonjour,</p>
+        
+        <p>Vous avez reçu une nouvelle demande de covoiturage pour votre trajet :</p>
+        
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <p><strong>Festival :</strong> {{ festival_name }}</p>
+            <p><strong>Date :</strong> {{ date_depart }}</p>
+            <p><strong>Itinéraire :</strong> {{ departure }} → {{ arrival }}</p>
+        </div>
+        
+        <h3>Détails du passager :</h3>
+        <ul>
+            <li><strong>Nom :</strong> {{ passenger_name }}</li>
+            <li><strong>Email :</strong> {{ passenger_email }}</li>
+            {% if passenger_message %}
+            <li><strong>Message :</strong> {{ passenger_message }}</li>
+            {% endif %}
+        </ul>
+        
+        <p>Pour accepter cette demande, vous pouvez répondre directement à cet email ou contacter le passager à l'adresse fournie ci-dessus.</p>
+        
+        <div style="text-align: center; margin: 25px 0;">
+            <a href="mailto:{{ passenger_email }}" class="button">Contacter le passager</a>
+        </div>
+        
+        <p>Merci d'utiliser notre service de covoiturage !</p>
+        
+        <div class="footer">
+            <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre directement.</p>
+            <p>© 2025 Covoiturage Festival - Tous droits réservés</p>
+        </div>
+    </div>
+</body>
+</html>
