@@ -1,15 +1,87 @@
 // Variables globales
 let currentFestivalId = null;
 
-// Fonction pour ouvrir le formulaire de contact
-function openContactForm(driverId, trajetId) {
-    // Récupérer l'ID du festival depuis l'URL actuelle
-    const currentUrl = new URL(window.location.href);
-    const festivalId = currentUrl.pathname.split('/').pop();
+// Fonction pour ouvrir la modale de contact
+function openContactModal(driverId, trajetId) {
+    // Créer la modale
+    const modal = document.createElement('div');
+    modal.className = 'contact-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Contacter le conducteur</h3>
+            <form id="contactForm">
+                <input type="hidden" id="driverId" value="${driverId}">
+                <input type="hidden" id="trajetId" value="${trajetId}">
+                <div class="form-group">
+                    <label for="contactName">Votre nom complet*</label>
+                    <input type="text" id="contactName" required>
+                </div>
+                <div class="form-group">
+                    <label for="contactEmail">Votre email*</label>
+                    <input type="email" id="contactEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="contactPhone">Votre téléphone*</label>
+                    <input type="tel" id="contactPhone" 
+                           pattern="^\\+[0-9]{1,3}[0-9]{8,15}$" 
+                           title="Format: +indicatifnuméro (ex: +3248420010)" 
+                           required>
+                </div>
+                <div class="form-group">
+                    <label for="contactMessage">Message (facultatif)</label>
+                    <textarea id="contactMessage" rows="4"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Envoyer la demande</button>
+            </form>
+        </div>
+    `;
     
-    // Construire l'URL avec tous les paramètres nécessaires
-    const url = `/contact?driver_id=${encodeURIComponent(driverId)}&trajet_id=${encodeURIComponent(trajetId)}&festival_id=${encodeURIComponent(festivalId)}`;
-    window.open(url, '_blank', 'width=600,height=700');
+    // Ajouter la modale à la page
+    document.body.appendChild(modal);
+    modal.style.display = 'block';
+
+    // Gestion de la fermeture de la modale
+    modal.querySelector('.close-modal').onclick = () => modal.remove();
+    window.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+
+    // Gestion de la soumission du formulaire
+    const form = modal.querySelector('#contactForm');
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        const formData = {
+            driverId: document.getElementById('driverId').value,
+            trajetId: document.getElementById('trajetId').value,
+            name: document.getElementById('contactName').value,
+            email: document.getElementById('contactEmail').value,
+            phone: document.getElementById('contactPhone').value,
+            message: document.getElementById('contactMessage').value
+        };
+
+        try {
+            const response = await fetch('/api/contact-request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (response.ok) {
+                showNotification('Votre demande a été envoyée avec succès !', 'success');
+                modal.remove();
+            } else {
+                const error = await response.json();
+                throw new Error(error.detail || 'Une erreur est survenue');
+            }
+        } catch (error) {
+            console.error('Erreur:', error);
+            showNotification(error.message || 'Une erreur est survenue', 'error');
+        }
+    };
 }
 
 // Fonction pour afficher un message de chargement
@@ -436,7 +508,7 @@ async function loadTrajets(festival_id) {
                             </div>
                             
                             <div class="trajet-actions">
-                        <button class="btn btn-sm btn-primary" onclick="openContactForm('${trajet.conducteur_id || 'unknown'}', '${trajet.id}')">
+                        <button class="btn btn-sm btn-primary" onclick="openContactModal('${trajet.conducteur_id || 'unknown'}', '${trajet.id}')">
                             <i class="fas fa-envelope"></i> Contacter
                         </button>
                         <div class="trajet-secret-form" id="secret-form-${trajet.id}" style="display: none; margin-top: 10px;">
@@ -927,54 +999,63 @@ function setupTrajetForm() {
 
             // Récupérer les données du formulaire
             const typeTrajet = form.querySelector('input[name="trajet_type"]:checked').value;
-            const adresses = [];
-            const heures = [];
-            const placesParArret = [];
+            const places = parseInt(document.getElementById('places').value);
+            const commentaires = document.getElementById('commentaires').value;
+            const contactEmail = document.getElementById('contact-email').value;
+            const contactPhone = document.getElementById('contact-phone').value;
+            const secret = document.getElementById('secret').value;
+            const festivalId = document.getElementById('festival-id').value;
+            
+            // Valider le format du numéro de téléphone
+            const phonePattern = /^\+[0-9]{1,3}[0-9]{8,15}$/;
+            if (!phonePattern.test(contactPhone)) {
+                showNotification('Veuillez entrer un numéro de téléphone valide (ex: +3248420010)', 'error');
+                return;
+            }
 
-            // Récupérer le point de départ
-            const etapeDepart = form.querySelector('.etape-container:first-of-type');
-            adresses.push(etapeDepart.querySelector('.adresse').value);
-            heures.push(etapeDepart.querySelector('.heure-depart').value);
-            const placesDepart = parseInt(document.getElementById('places').value, 10);
-            placesParArret.push(placesDepart);
-
-            // Récupérer les arrêts intermédiaires
-            const arrets = form.querySelectorAll('.arret-intermediaire');            
-            arrets.forEach(arret => {
-                const adresse = arret.querySelector('.adresse').value;
-                const heure = arret.querySelector('.heure-passage').value;
-                const places = parseInt(arret.querySelector('.places-arret').value, 10);
+            // Récupérer les étapes du trajet
+            const etapes = [];
+            const etapeContainers = form.querySelectorAll('.etape-container');
+            let placesDisponibles = places; // Initialiser avec le nombre de places du formulaire
+            
+            etapeContainers.forEach((container, index) => {
+                const adresse = container.querySelector('.adresse').value;
+                let heure = '';
+                
+                // Trouver le champ d'heure approprié selon le type d'étape
+                if (index === 0) {
+                    heure = container.querySelector('.heure-depart').value;
+                } else if (index === etapeContainers.length - 1) {
+                    heure = container.querySelector('.heure-arrivee').value;
+                } else {
+                    heure = container.querySelector('.heure-passage').value;
+                }
                 
                 if (adresse && heure) {
-                    adresses.push(adresse);
-                    heures.push(heure);
-                    placesParArret.push(places);
+                    etapes.push({ adresse, heure });
+                } else {
+                    throw new Error('Veuillez remplir toutes les étapes du trajet');
                 }
             });
 
-            // Récupérer le point d'arrivée
-            const etapeArrivee = form.querySelector('.etape-container:last-of-type');
-            adresses.push(etapeArrivee.querySelector('.adresse').value);
-            heures.push(etapeArrivee.querySelector('.heure-arrivee').value);
-            placesParArret.push(placesDepart); // Même nombre de places qu'au départ
-
             // Vérifier qu'il y a au moins un point de départ et d'arrivée
-            if (adresses.length < 2) {
+            if (etapes.length < 2) {
                 throw new Error('Veuillez spécifier au moins un point de départ et une destination');
             }
 
             // Préparer les données du trajet
             const trajetData = {
-                festival_id: parseInt(festivalId, 10),
+                festival_id: festivalId,
                 type: typeTrajet,
-                adresses: adresses,
-                heures: heures,
-                places_par_arret: placesParArret,
-                places_disponibles: Math.min(...placesParArret), // Le nombre de places disponibles est le minimum des places par arrêt
+                adresses: etapes.map(e => e.adresse),
+                heures: etapes.map(e => e.heure),
+                places_par_arret: Array(etapes.length).fill(places), // Même nombre de places pour tous les arrêts
+                places_disponibles: places,
                 date_trajet: document.getElementById('trajet-date').value,
-                commentaires: document.getElementById('commentaires').value,
-                contact: document.getElementById('contact').value,
-                secret: document.getElementById('secret').value,
+                commentaires,
+                contact: contactEmail,
+                telephone: contactPhone,
+                secret,
                 date_creation: new Date().toISOString()
             };
 

@@ -613,10 +613,20 @@ async def add_trajet(request: Request):
     new_trajet = await request.json()
     
     # Validation des champs requis
-    required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "secret", "date_trajet"]
+    required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "telephone", "secret", "date_trajet"]
     for field in required_fields:
         if field not in new_trajet:
             return {"error": f"Champ manquant: {field}"}, 400
+            
+    # Validation du format de l'email
+    if "@" not in new_trajet["contact"] or "." not in new_trajet["contact"]:
+        return {"error": "Format d'email invalide"}, 400
+        
+    # Validation du format du téléphone (format international: +33612345678)
+    import re
+    phone_pattern = r'^\+[0-9]{1,3}[0-9]{8,15}$'
+    if not re.match(phone_pattern, new_trajet["telephone"]):
+        return {"error": "Format de téléphone invalide. Utilisez le format international (ex: +33612345678)"}, 400
             
     # Validation de la date du trajet
     try:
@@ -636,6 +646,9 @@ async def add_trajet(request: Request):
     new_trajet["date_creation"] = datetime.now().isoformat()
     # S'assurer que la date est au bon format
     new_trajet["date_trajet"] = trajet_date.isoformat()
+    
+    # Ajout de l'ID du conducteur (généré de manière aléatoire)
+    new_trajet["conducteur_id"] = str(uuid.uuid4())
     
     # Lecture et mise à jour du fichier des trajets
     try:

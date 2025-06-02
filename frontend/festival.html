@@ -118,9 +118,19 @@
                         </div>
                         <input type="hidden" id="festival-id" value="">
 
-                        <div class="form-group">
-                            <label for="contact">Coordonnées (email/tél)</label>
-                            <input type="text" id="contact" class="form-control" placeholder="Comment vous contacter ?" required>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contact-email">Email de contact*</label>
+                                <input type="email" id="contact-email" class="form-control" 
+                                       placeholder="votre@email.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contact-phone">Téléphone*</label>
+                                <input type="tel" id="contact-phone" class="form-control" 
+                                       pattern="^\+[0-9]{1,3}[0-9]{8,15}$" 
+                                       title="Format: +indicatifnuméro (ex: +3248420010)" 
+                                       placeholder="+3248420010" required>
+                            </div>
                         </div>
 
                         <div class="form-group">
