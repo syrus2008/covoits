@@ -324,6 +324,10 @@ async def contact_request(contact: ContactRequest):
         if est_complet:
             raise HTTPException(status_code=400, detail="Désolé, ce trajet est déjà complet.")
             
+        # Vérifier si le nombre de places demandées est valide
+        if not hasattr(contact, 'places_demandees') or contact.places_demandees < 1:
+            contact.places_demandees = 1  # Valeur par défaut
+            
         if contact.places_demandees > places_restantes:
             raise HTTPException(
                 status_code=400, 
@@ -353,18 +357,25 @@ async def contact_request(contact: ContactRequest):
             'date_depart': date_depart,
             'departure': trajet.get('adresses', [''])[0],
             'arrival': festival.get('lieu', ''),
+            'places_restantes': places_restantes - contact.places_demandees,
             'passenger_name': contact.name,
             'passenger_email': contact.email,
             'passenger_message': contact.message or '',
+            'places_demandees': contact.places_demandees,
             'support_email': 'covoiturage.festival@gmail.com'
         }
 
+        # Calculer les places restantes après la réservation
+        places_restantes_apres = max(0, places_restantes - contact.places_demandees)
+        
         passenger_context = {
             'passenger_name': contact.name,
             'festival_name': festival.get('nom', 'Non spécifié'),
             'date_depart': date_depart,
             'departure': trajet.get('adresses', [''])[0],
             'arrival': festival.get('lieu', ''),
+            'places_demandees': contact.places_demandees,
+            'places_restantes': places_restantes_apres,
             'trip_type': 'Aller-retour' if trajet.get('aller_retour', False) else 'Aller simple',
             'driver_name': trajet.get('contact', 'Non spécifié'),
             'driver_phone': trajet.get('telephone', ''),
@@ -407,21 +418,36 @@ async def contact_request(contact: ContactRequest):
                 detail="Une erreur est survenue lors de l'enregistrement de votre demande"
             )
         
-        # Mettre à jour le statut du trajet si nécessaire
-        places_restantes, est_complet = get_places_restantes(contact.trajetId)
-        if est_complet:
-            try:
-                with open('backend/data/trajets.json', 'r+', encoding='utf-8') as f:
-                    trajets = json.load(f)
-                    for t in trajets:
-                        if str(t.get('id')) == contact.trajetId:
+        # Mettre à jour le nombre de places disponibles
+        try:
+            with open('backend/data/trajets.json', 'r+', encoding='utf-8') as f:
+                trajets = json.load(f)
+                trajet_trouve = False
+                
+                for t in trajets:
+                    if str(t.get('id')) == contact.trajetId:
+                        # Mettre à jour le nombre de places disponibles
+                        places_actuelles = int(t.get('places_disponibles', 0))
+                        nouvelles_places = max(0, places_actuelles - contact.places_demandees)
+                        t['places_disponibles'] = nouvelles_places
+                        
+                        # Mettre à jour le statut si nécessaire
+                        if nouvelles_places <= 0:
                             t['statut'] = 'complet'
-                            break
+                        
+                        trajet_trouve = True
+                        break
+                
+                if trajet_trouve:
                     f.seek(0)
                     json.dump(trajets, f, ensure_ascii=False, indent=2)
                     f.truncate()
-            except Exception as e:
-                print(f"Erreur lors de la mise à jour du statut du trajet: {str(e)}")
+                else:
+                    print(f"Avertissement: Trajet {contact.trajetId} non trouvé pour la mise à jour des places")
+                    
+        except Exception as e:
+            print(f"Erreur lors de la mise à jour des places disponibles: {str(e)}")
+            # Ne pas échouer la requête à cause de cette erreur, juste la logger
         
         # Envoyer les emails
         email_sent = True
@@ -435,6 +461,7 @@ async def contact_request(contact: ContactRequest):
         passenger_email_html = await load_email_template('passenger_confirmation', passenger_context)
         
         # Email au conducteur
+        email_sent = False
         if trajet.get('contact_email'):
             email_sent = await send_email(
                 recipient_email=trajet['contact_email'],
@@ -444,7 +471,7 @@ async def contact_request(contact: ContactRequest):
             )
         
         # Email de confirmation au passager
-        if email_sent:
+        if email_sent or not trajet.get('contact_email'):
             email_sent = await send_email(
                 recipient_email=contact.email,
                 subject=f"[Covoiturage Festival] Confirmation de votre demande ({contact.places_demandees} place(s))",

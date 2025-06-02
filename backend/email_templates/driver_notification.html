@@ -51,21 +51,26 @@
         
         <p>Vous avez reçu une nouvelle demande de covoiturage pour votre trajet :</p>
         
-        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+        <div style="background-color: #f0f8ff; padding: 15px; border-radius: 5px; margin: 15px 0; border-left: 4px solid #4CAF50;">
+            <h3 style="margin-top: 0; color: #2c3e50;">Détails du trajet</h3>
             <p><strong>Festival :</strong> {{ festival_name }}</p>
             <p><strong>Date :</strong> {{ date_depart }}</p>
             <p><strong>Itinéraire :</strong> {{ departure }} → {{ arrival }}</p>
-            <p><strong>Places restantes :</strong> {{ places_restantes }}</p>
+            <p><strong>Places demandées :</strong> {{ places_demandees }}</p>
+            <p><strong>Places restantes après réservation :</strong> {{ places_restantes }}</p>
         </div>
         
-        <h3>Détails du passager :</h3>
-        <ul>
-            <li><strong>Nom :</strong> {{ passenger_name }}</li>
-            <li><strong>Email :</strong> {{ passenger_email }}</li>
+        <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <h3 style="margin-top: 0; color: #2c3e50;">Détails du passager</h3>
+            <p><strong>Nom :</strong> {{ passenger_name }}</p>
+            <p><strong>Email :</strong> {{ passenger_email }}</p>
             {% if passenger_message %}
-            <li><strong>Message :</strong> {{ passenger_message }}</li>
+            <p><strong>Message :</strong></p>
+            <div style="background: white; padding: 10px; border-left: 3px solid #4CAF50; margin: 10px 0;">
+                {{ passenger_message }}
+            </div>
             {% endif %}
-        </ul>
+        </div>
         
         <p>Pour accepter cette demande, vous pouvez répondre directement à cet email ou contacter le passager à l'adresse fournie ci-dessus.</p>
         
