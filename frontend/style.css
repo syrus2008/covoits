@@ -38,17 +38,15 @@
 
 /* Styles pour la section des festivals en vedette */
 .featured-festivals {
-    width: 100% !important;
-    min-width: 100% !important;
-    padding: 4rem 0 !important;
-    background-color: #f8f9fa !important;
-    box-sizing: border-box !important;
-    border: 3px solid blue !important;
-    overflow: hidden !important; /* Empêcher le débordement */
+    width: 100%;
+    padding: 4rem 0;
+    background-color: #f8f9fa;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .featured-festivals .container {
-    width: 100% !important;
+    width: 100%;
     min-width: 100% !important;
     max-width: 100% !important;
     margin: 0 auto !important;
