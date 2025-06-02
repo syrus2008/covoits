@@ -648,69 +648,51 @@ function genererEtapesTrajet(trajet) {
     
     let html = '';
     const totalEtapes = trajet.adresses.length;
+    const isRetour = trajet.type === 'retour';
     
-    // Ajouter le départ
-    if (trajet.adresses[0]) {
-        html += `
-            <div class="etape depart">
-                <div class="etape-point">
-                    <i class="fas fa-flag"></i>
-                </div>
-                <div class="etape-details">
-                    <div class="etape-heure">${formatTime(trajet.heures[0])}</div>
-                    <div class="etape-lieu">${trajet.adresses[0]}</div>
-                    ${trajet.places_par_arret && trajet.places_par_arret[0] !== undefined ? `
-                        <div class="etape-places">
-                            <i class="fas fa-users"></i>
-                            ${trajet.places_par_arret[0]} place${trajet.places_par_arret[0] > 1 ? 's' : ''} disponible${trajet.places_par_arret[0] > 1 ? 's' : ''}
-                        </div>` : ''
-                    }
-                </div>
-            </div>`;
-    }
+    // Déterminer l'ordre d'affichage en fonction du type de trajet
+    const indices = isRetour 
+        ? Array.from({length: totalEtapes}, (_, i) => totalEtapes - 1 - i) // Ordre inverse pour les retours
+        : Array.from({length: totalEtapes}, (_, i) => i); // Ordre normal pour les allers
     
-    // Ajouter les arrêts intermédiaires
-    for (let i = 1; i < totalEtapes - 1; i++) {
-        if (trajet.adresses[i]) {
-            html += `
-                <div class="etape arret">
-                    <div class="etape-point">
-                        <i class="fas fa-map-marker-alt"></i>
-                    </div>
-                    <div class="etape-details">
-                        <div class="etape-heure">${formatTime(trajet.heures[i])}</div>
-                        <div class="etape-lieu">${trajet.adresses[i]}</div>
-                        ${trajet.places_par_arret && trajet.places_par_arret[i] !== undefined ? `
-                            <div class="etape-places">
-                                <i class="fas fa-users"></i>
-                                ${trajet.places_par_arret[i]} place${trajet.places_par_arret[i] > 1 ? 's' : ''} disponible${trajet.places_par_arret[i] > 1 ? 's' : ''}
-                            </div>` : ''
-                        }
-                    </div>
-                </div>`;
+    // Ajouter chaque étape dans l'ordre déterminé
+    indices.forEach((index, i) => {
+        const adresse = trajet.adresses[index];
+        const heure = trajet.heures[index];
+        const places = trajet.places_par_arret ? trajet.places_par_arret[index] : undefined;
+        
+        if (!adresse) return;
+        
+        // Déterminer le type d'étape (départ, intermédiaire, arrivée)
+        let etapeClass = 'arret';
+        let iconClass = 'fa-map-marker-alt';
+        
+        if (i === 0) {
+            etapeClass = 'depart';
+            iconClass = isRetour ? 'fa-flag-checkered' : 'fa-flag';
+        } else if (i === indices.length - 1) {
+            etapeClass = 'arrivee';
+            iconClass = isRetour ? 'fa-flag' : 'fa-flag-checkered';
         }
-    }
-    
-    // Ajouter l'arrivée
-    if (totalEtapes > 1 && trajet.adresses[totalEtapes - 1]) {
-        const lastIndex = totalEtapes - 1;
+        
+        // Ajouter l'étape au HTML
         html += `
-            <div class="etape arrivee">
+            <div class="etape ${etapeClass}">
                 <div class="etape-point">
-                    <i class="fas fa-flag-checkered"></i>
+                    <i class="fas ${iconClass}"></i>
                 </div>
                 <div class="etape-details">
-                    <div class="etape-heure">${formatTime(trajet.heures[lastIndex])}</div>
-                    <div class="etape-lieu">${trajet.adresses[lastIndex]}</div>
-                    ${trajet.places_par_arret && trajet.places_par_arret[lastIndex] !== undefined ? `
+                    <div class="etape-heure">${formatTime(heure)}</div>
+                    <div class="etape-lieu">${adresse}</div>
+                    ${places !== undefined ? `
                         <div class="etape-places">
                             <i class="fas fa-users"></i>
-                            ${trajet.places_par_arret[lastIndex]} place${trajet.places_par_arret[lastIndex] > 1 ? 's' : ''} disponible${trajet.places_par_arret[lastIndex] > 1 ? 's' : ''}
+                            ${places} place${places > 1 ? 's' : ''} disponible${places > 1 ? 's' : ''}
                         </div>` : ''
                     }
                 </div>
             </div>`;
-    }
+    });
     
     return html;
 }
