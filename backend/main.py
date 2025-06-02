@@ -345,6 +345,15 @@ async def get_festivals():
     with open(FESTIVALS_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
+@app.get("/api/festivals/{festival_id}")
+async def get_festival(festival_id: int):
+    with open(FESTIVALS_FILE, "r", encoding="utf-8") as f:
+        festivals = json.load(f)
+        for festival in festivals:
+            if festival["id"] == festival_id:
+                return festival
+        raise HTTPException(status_code=404, detail="Festival non trouvé")
+
 @app.get("/add-festival")
 async def add_festival_page():
     return FileResponse("frontend/add_festival.html")
