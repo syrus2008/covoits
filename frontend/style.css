@@ -1502,15 +1502,31 @@ h1::after {
 }
 
 .contact-modal .btn-primary {
-    background-color: #4a6fa5;
+    background-color: var(--primary-color);
     color: white;
     border: none;
     padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 16px;
-    width: 100%;
-    margin-top: 10px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+/* Style pour le bouton désactivé */
+.btn-primary:disabled,
+.btn-primary[disabled] {
+    background-color: #cccccc !important;
+    color: #666666 !important;
+    cursor: not-allowed !important;
+    opacity: 0.8 !important;
+    box-shadow: none !important;
+}
+
+/* Style pour le bouton désactivé au survol */
+.btn-primary:disabled:hover,
+.btn-primary[disabled]:hover {
+    transform: none !important;
+    box-shadow: none !important;
 }
 
 .contact-modal .btn-primary:hover {
@@ -2213,7 +2229,7 @@ nav ul li a:hover {
     color: #6c757d;
 }
 
-.btn-primary {
+.contact-form .btn-primary {
     background-color: var(--primary-color);
     color: white;
     border: none;
@@ -2222,12 +2238,45 @@ nav ul li a:hover {
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
 }
 
-.btn-primary:hover {
-    background-color: #3a5a80;
+.contact-form .btn-primary:disabled {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    color: white !important;
+    cursor: not-allowed !important;
+    opacity: 0.8 !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+.contact-form .spinner {
+    display: none;
+    align-items: center;
+    gap: 8px;
+}
+
+.contact-form .spinner i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+#buttonText {
+    display: inline-block;
+}
+
+#buttonSpinner {
+    display: none;
 }
 
 .success-message {

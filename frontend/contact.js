@@ -83,6 +83,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             trajetId: form.trajetId.value,
             name: form.name.value,
             email: form.email.value,
+            phone: form.phone.value,
             places_demandees: placesDemandees,
             message: form.message.value
         };

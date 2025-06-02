@@ -61,6 +61,7 @@ class ContactRequest(BaseModel):
     trajetId: str
     name: str
     email: str
+    phone: Optional[str] = None
     message: Optional[str] = None
     places_demandees: int = 1
 
@@ -385,6 +386,7 @@ async def contact_request(contact: ContactRequest):
             'places_restantes': places_restantes - contact.places_demandees,
             'passenger_name': contact.name,
             'passenger_email': contact.email,
+            'passenger_phone': contact.phone,
             'passenger_message': contact.message or '',
             'places_demandees': contact.places_demandees,
             'support_email': 'covoiturage.festival@gmail.com'

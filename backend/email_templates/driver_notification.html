@@ -64,6 +64,9 @@
             <h3 style="margin-top: 0; color: #2c3e50;">Détails du passager</h3>
             <p><strong>Nom :</strong> {{ passenger_name }}</p>
             <p><strong>Email :</strong> {{ passenger_email }}</p>
+            {% if passenger_phone %}
+            <p><strong>Téléphone :</strong> {{ passenger_phone }}</p>
+            {% endif %}
             
             <p><strong>Message :</strong></p>
             <div style="background: white; padding: 10px; border-left: 3px solid #4CAF50; margin: 10px 0;">
