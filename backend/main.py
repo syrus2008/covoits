@@ -574,18 +574,34 @@ async def add_festival(request: Request):
     return {"message": "Festival ajouté avec succès"}
 
 @app.get("/api/trajets/{festival_id}")
-async def get_trajets(festival_id: int):
+async def get_trajets(festival_id: str):
     try:
+        # Convertir festival_id en entier si c'est une chaîne de caractères
+        try:
+            festival_id_int = int(festival_id)
+        except (ValueError, TypeError):
+            print(f"Erreur: festival_id doit être un nombre (reçu: {festival_id})")
+            return []
+            
         with open(TRAJETS_FILE, "r", encoding="utf-8") as f:
             try:
                 trajets = json.load(f)
             except json.JSONDecodeError:
+                print("Erreur: Fichier de trajets corrompu")
                 return []
                 
         # Filtrer les trajets par festival_id et formater la réponse
         result = []
         for trajet in trajets:
-            if trajet.get("festival_id") == festival_id:
+            # Convertir le festival_id du trajet en entier pour la comparaison
+            trajet_festival_id = trajet.get("festival_id")
+            if isinstance(trajet_festival_id, str):
+                try:
+                    trajet_festival_id = int(trajet_festival_id)
+                except (ValueError, TypeError):
+                    continue
+                    
+            if trajet_festival_id == festival_id_int:
                 # Créer une version formatée du trajet pour la réponse
                 trajet_formatte = {
                     "id": trajet.get("id"),
@@ -621,6 +637,14 @@ async def add_trajet(request: Request):
                 error_msg = f"Champ manquant: {field}"
                 print(error_msg)
                 return JSONResponse(status_code=400, content={"error": error_msg})
+                
+        # S'assurer que festival_id est un entier
+        try:
+            new_trajet["festival_id"] = int(new_trajet["festival_id"])
+        except (ValueError, TypeError):
+            error_msg = "L'ID du festival doit être un nombre"
+            print(error_msg)
+            return JSONResponse(status_code=400, content={"error": error_msg})
                 
         # Validation du format de l'email
         if not isinstance(new_trajet["contact"], str) or "@" not in new_trajet["contact"] or "." not in new_trajet["contact"]:
