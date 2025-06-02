@@ -879,6 +879,78 @@ window.confirmMarkComplet = async function(festivalId, trajetId) {
     }
 }
 
+// Fonction pour marquer un trajet comme disponible à nouveau
+window.markAsAvailable = async function(trajetId, festivalId) {
+    console.log('markAsAvailable appelé avec trajetId:', trajetId, 'et festivalId:', festivalId);
+    
+    const secretInput = document.getElementById(`reopen-secret-${trajetId}`);
+    if (!secretInput) {
+        console.error('Champ secret non trouvé pour la réouverture du trajet:', trajetId);
+        showNotification('Erreur: champ de mot de passe non trouvé', 'error');
+        return;
+    }
+    
+    const secret = secretInput.value.trim();
+    if (!secret) {
+        showNotification('Veuillez entrer le mot-clé secret', 'error');
+        return;
+    }
+    
+    // Afficher un indicateur de chargement
+    const confirmBtn = document.querySelector(`#reopen-form-${trajetId} .btn-success`);
+    const originalBtnText = confirmBtn ? confirmBtn.innerHTML : '';
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
+    }
+    
+    try {
+        console.log('Envoi de la requête pour rendre le trajet disponible:', { trajetId, festivalId });
+        
+        const response = await fetch(`/api/trajets/${festivalId}/reopen`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'ngrok-skip-browser-warning': 'true' 
+            },
+            body: JSON.stringify({ 
+                trajet_id: trajetId,
+                secret: secret
+            })
+        });
+        
+        console.log('Réponse reçue:', response.status);
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Erreur du serveur:', errorText);
+            throw new Error('Erreur lors de la communication avec le serveur');
+        }
+        
+        const result = await response.json();
+        console.log('Résultat:', result);
+        
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        
+        showNotification(result.message || 'Trajet rendu disponible avec succès', 'success');
+        
+        // Recharger la liste des trajets après un court délai
+        setTimeout(() => loadTrajets(festivalId), 500);
+        
+    } catch (error) {
+        console.error('Erreur lors de la réouverture du trajet:', error);
+        showNotification(error.message || 'Une erreur est survenue lors de la réouverture du trajet', 'error');
+    } finally {
+        // Réactiver le bouton
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalBtnText;
+        }
+    }
+};
+
 // Fonction pour afficher le formulaire de modification des places
 function showUpdatePlacesForm(trajetId, currentPlaces, festivalId) {
     console.log('Appel de showUpdatePlacesForm avec trajetId:', trajetId, 'et places:', currentPlaces);
