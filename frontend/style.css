@@ -38,21 +38,25 @@
 
 /* Styles pour la section des festivals en vedette */
 .featured-festivals {
-    width: 100%;
-    padding: 4rem 0;
-    background-color: #f8f9fa;
-    box-sizing: border-box;
+    width: 100% !important;
+    min-width: 100% !important;
+    padding: 4rem 0 !important;
+    background-color: #f8f9fa !important;
+    box-sizing: border-box !important;
+    border: 3px solid blue !important;
+    overflow: hidden !important; /* Empêcher le débordement */
 }
 
 .featured-festivals .container {
-    width: 100%;
-    max-width: 1600px;
-    margin: 0 auto;
-    padding: 0 20px;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 20px !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    border: 3px solid green !important;
+    overflow: visible !important; /* Permettre le débordement si nécessaire */
 }
 
 /* Styles pour le titre et le sous-titre */
@@ -264,6 +268,16 @@ body {
     margin: 0 auto;
     padding: 0 20px;
 }
+
+.contain#festivals {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    display: block !important;
+    box-sizing: border-box !important;
+}
+
 /* En-têtes */
 h1, h2, h3, h4, h5, h6 {
     color: var(--primary-color);
@@ -329,27 +343,207 @@ h1::after {
    GRID LAYOUT - GRILLE DES FESTIVALS
    ==================================== */
 #festivals {
-    width: 100%;
-    max-width: 1600px;
-    margin: 30px auto;
-    padding: 0 20px;
-    box-sizing: border-box;
-    /* Styles de débogage */
-    border: 2px dashed red;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    display: block !important;
+    border: none !important;
 }
 
 /* Conteneur principal de la grille */
+/* Grille des festivals */
 .festivals-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
     width: 100%;
-    max-width: 100%;
-    margin: 0;
-    padding: 0.5rem;
-    list-style: none;
+    margin: 2rem 0;
+    padding: 1rem;
     box-sizing: border-box;
-    justify-content: center;
+}
+
+/* Conteneur principal des festivals */
+#festivals {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+    box-sizing: border-box;
+}
+
+/* Styles pour la section des festivals */
+.section-title {
+    color: #333;
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.section-title i {
+    color: var(--primary-color);
+}
+
+/* Styles pour les cartes de festival */
+.festival-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.festival-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.festival-image {
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.festival-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.festival-card:hover .festival-image img {
+    transform: scale(1.05);
+}
+
+.festival-content {
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.festival-content h3 {
+    margin: 0 0 0.75rem 0;
+    color: #333;
+    font-size: 1.25rem;
+}
+
+.festival-meta {
+    margin-bottom: 1rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.festival-date, .festival-location {
+    margin: 0.25rem 0;
+    display: flex;
+    align-items: center;
+}
+
+.festival-date i, .festival-location i {
+    margin-right: 0.5rem;
+    color: var(--primary-color);
+}
+
+.festival-description {
+    margin-bottom: 1.5rem;
+    color: #555;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.festival-actions {
+    margin-top: auto;
+}
+
+.past-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background-color: #ff6b6b;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Forcer les éléments à prendre toute la largeur disponible */
+.festivals-grid > * {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important; /* Important pour les flex items */
+    box-sizing: border-box !important;
+}
+
+/* Styles pour les cartes de la grille */
+.festivals-grid .festival-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+    box-sizing: border-box !important;
+    background-color: white !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+
+/* Styles de débogage pour les sections */
+.festivals-section {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 2rem 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    border: 2px dashed orange !important;
+}
+
+.festivals-section h2 {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 0 1rem 0 !important;
+    padding: 0.5rem !important;
+    box-sizing: border-box !important;
+    background-color: rgba(0, 255, 0, 0.1) !important;
+    border: 1px solid green !important;
+}
+
+/* Styles de débogage pour les cartes de festival */
+.festivals-grid .festival-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+    box-sizing: border-box !important;
+    background-color: rgba(0, 0, 255, 0.1) !important;
+    border: 1px solid blue !important;
+    position: relative !important;
+}
+
+/* Ajout d'un pseudo-élément pour afficher le numéro de la carte */
+.festival-card::before {
+    content: attr(data-index);
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: red;
+    color: white;
+    font-size: 12px;
+    padding: 2px 5px;
+    z-index: 10;
 }
 
 /* Styles pour les cartes de la grille */

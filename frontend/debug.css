@@ -1,0 +1,96 @@
+/* Styles de débogage pour forcer l'affichage en grille */
+/* S'assurer que le HTML et le BODY prennent toute la largeur */
+* {
+    outline: 1px solid rgba(255, 0, 0, 0.2) !important;
+}
+
+html, body {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    background-color: #f0f0f0 !important;
+}
+
+/* Forcer le conteneur principal à être visible */
+#festivals {
+    background-color: rgba(0, 255, 0, 0.2) !important;
+    border: 2px solid green !important;
+    padding: 20px !important;
+    margin: 20px !important;
+    display: block !important;
+}
+
+/* Styles pour le conteneur principal des festivals */
+#festivals {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+    position: relative !important;
+    z-index: 1 !important;
+    background-color: rgba(0, 255, 0, 0.1) !important;
+    border: 2px solid green !important;
+}
+
+/* Styles pour la grille des festivals */
+.festivals-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(300px, 1fr)) !important;
+    gap: 2rem !important;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+    box-sizing: border-box !important;
+    background-color: rgba(255, 0, 0, 0.1) !important;
+    border: 2px solid red !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+/* Styles pour les cartes de festival */
+.festival-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 1rem !important;
+    box-sizing: border-box !important;
+    background-color: white !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    position: relative !important;
+    z-index: 3 !important;
+}
+
+/* Styles pour le conteneur parent */
+.featured-festivals {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 2rem 0 !important;
+    box-sizing: border-box !important;
+    background-color: #f8f9fa !important;
+    position: relative !important;
+    z-index: 1 !important;
+    overflow: visible !important;
+}
+
+.featured-festivals .container {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 1rem !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+    z-index: 2 !important;
+    overflow: visible !important;
+}

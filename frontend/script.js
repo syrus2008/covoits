@@ -168,6 +168,18 @@ async function loadFestivals() {
     const container = document.getElementById('festivals');
     if (!container) return;
     
+    // Forcer les styles inline pour le conteneur principal
+    container.style.width = '100%';
+    container.style.minWidth = '100%';
+    container.style.maxWidth = '100%';
+    container.style.margin = '0';
+    container.style.padding = '0';
+    container.style.boxSizing = 'border-box';
+    container.style.display = 'block';
+    container.style.overflow = 'visible';
+    container.style.position = 'relative';
+    container.style.zIndex = '1';
+    
     showLoading(container, 'Chargement des festivals en cours...');
     
     try {
@@ -238,6 +250,9 @@ async function loadFestivals() {
             
             // Créer le titre de la section
             const title = document.createElement('h2');
+            title.className = 'section-title';
+            title.style.marginBottom = '1rem';
+            
             const icon = document.createElement('i');
             icon.className = 'fas fa-calendar-alt';
             title.appendChild(icon);
@@ -251,9 +266,16 @@ async function loadFestivals() {
             upcomingFestivals.forEach((festival, index) => {
                 const card = createFestivalCard(festival, index);
                 if (card) {
+                    console.log(`Ajout de la carte ${index + 1}/${upcomingFestivals.length}:`, festival.nom);
+                    // Ajouter un attribut data-index pour le débogage
+                    card.setAttribute('data-index', index + 1);
                     upcomingGrid.appendChild(card);
+                } else {
+                    console.error('Échec de création de la carte pour le festival:', festival.nom);
                 }
             });
+            
+            console.log('Nombre d\'éléments dans la grille:', upcomingGrid.children.length);
             
             // Assembler la section
             upcomingSection.appendChild(title);
