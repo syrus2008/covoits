@@ -21,12 +21,35 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
         self.user_names: Dict[WebSocket, str] = {}
+        self.chat_history: List[dict] = []
+        self.chat_history_file = "backend/data/chat_history.json"
+        self._load_chat_history()
+    
+    def _load_chat_history(self):
+        try:
+            if os.path.exists(self.chat_history_file):
+                with open(self.chat_history_file, "r", encoding="utf-8") as f:
+                    self.chat_history = json.load(f)
+        except Exception as e:
+            print(f"Erreur lors du chargement de l'historique du chat: {e}")
+            self.chat_history = []
+    
+    def _save_chat_history(self):
+        try:
+            os.makedirs(os.path.dirname(self.chat_history_file), exist_ok=True)
+            with open(self.chat_history_file, "w", encoding="utf-8") as f:
+                json.dump(self.chat_history[-100:], f, ensure_ascii=False, indent=2)  # Garder les 100 derniers messages
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde de l'historique du chat: {e}")
 
-    async def connect(self, websocket: WebSocket):
+    async def connect(self, websocket: WebSocket, username: str = None):
         await websocket.accept()
         self.active_connections.append(websocket)
-        self.user_names[websocket] = f"User-{len(self.active_connections)}"
-        return self.user_names[websocket]
+        username = username or f"User-{len(self.active_connections)}"
+        self.user_names[websocket] = username
+        # Envoyer l'historique au nouveau connecté
+        await websocket.send_json({"type": "history", "messages": self.chat_history})
+        return username
 
     def disconnect(self, websocket: WebSocket):
         if websocket in self.active_connections:
@@ -35,9 +58,14 @@ class ConnectionManager:
                 del self.user_names[websocket]
 
     async def broadcast(self, message: dict):
+        # Ajouter le message à l'historique
+        self.chat_history.append(message)
+        self._save_chat_history()
+        
+        # Envoyer le message à tous les clients connectés
         for connection in self.active_connections:
             try:
-                await connection.send_json(message)
+                await connection.send_json({"type": "message", **message})
             except:
                 self.disconnect(connection)
 
@@ -53,18 +81,42 @@ async def read_index():
 # Route WebSocket pour le chat
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    username = await manager.connect(websocket)
+    # Recevoir le nom d'utilisateur lors de la connexion
+    try:
+        data = await websocket.receive_text()
+        message_data = json.loads(data)
+        username = message_data.get("username", "").strip()
+    except:
+        username = None
+    
+    username = await manager.connect(websocket, username)
+    
     try:
         while True:
             data = await websocket.receive_text()
             message_data = json.loads(data)
+            
+            # Mettre à jour le nom d'utilisateur si fourni
+            if "username" in message_data and message_data["username"].strip():
+                new_username = message_data["username"].strip()
+                if new_username != username:
+                    username = new_username
+                    manager.user_names[websocket] = username
+            
+            # Créer le message
             message = {
                 "username": username,
-                "text": message_data.get("text", ""),
+                "text": message_data.get("text", "").strip(),
                 "timestamp": datetime.now().isoformat()
             }
+            
+            # Diffuser le message
             await manager.broadcast(message)
+            
     except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"Erreur WebSocket: {e}")
         manager.disconnect(websocket)
 
 @app.get("/api/festivals")
