@@ -535,7 +535,18 @@ async def add_festival_page():
     return FileResponse("frontend/add_festival.html")
 
 @app.get("/contact")
-async def contact_form(driver_id: str, trajet_id: str):
+async def contact_form(driver_id: str = None, trajet_id: str = None, festival_id: str = None):
+    # Vérifier que les paramètres requis sont présents
+    if not driver_id or not trajet_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Paramètres manquants. Veuillez fournir driver_id et trajet_id."
+        )
+    
+    # Stocker les paramètres dans le contexte de la requête pour une utilisation ultérieure
+    # (si nécessaire pour le traitement côté serveur)
+    
+    # Servir le formulaire de contact
     return FileResponse("frontend/contact_form.html")
 
 # Configuration pour servir les fichiers statiques supplémentaires

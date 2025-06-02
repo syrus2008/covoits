@@ -1,15 +1,24 @@
 // Récupère les paramètres d'URL
 const urlParams = new URLSearchParams(window.location.search);
-const driverId = urlParams.get('driverId');
-const trajetId = urlParams.get('trajetId');
+const driverId = urlParams.get('driver_id');
+const trajetId = urlParams.get('trajet_id');
+const festivalId = urlParams.get('festival_id');
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('contactRequestForm');
     const successMessage = document.getElementById('successMessage');
     
+    // Vérifier que les paramètres requis sont présents
+    if (!driverId || !trajetId) {
+        alert('Paramètres manquants. Veuillez passer par la page du trajet pour effectuer cette action.');
+        window.close();
+        return;
+    }
+    
     // Pré-remplir les champs cachés
     if (driverId) document.getElementById('driverId').value = driverId;
     if (trajetId) document.getElementById('trajetId').value = trajetId;
+    if (festivalId) document.getElementById('festivalId').value = festivalId;
     
     form.addEventListener('submit', async function(e) {
         e.preventDefault();

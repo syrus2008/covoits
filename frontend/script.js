@@ -3,7 +3,12 @@ let currentFestivalId = null;
 
 // Fonction pour ouvrir le formulaire de contact
 function openContactForm(driverId, trajetId) {
-    const url = `/contact?driverId=${encodeURIComponent(driverId)}&trajetId=${encodeURIComponent(trajetId)}`;
+    // Récupérer l'ID du festival depuis l'URL actuelle
+    const currentUrl = new URL(window.location.href);
+    const festivalId = currentUrl.pathname.split('/').pop();
+    
+    // Construire l'URL avec tous les paramètres nécessaires
+    const url = `/contact?driver_id=${encodeURIComponent(driverId)}&trajet_id=${encodeURIComponent(trajetId)}&festival_id=${encodeURIComponent(festivalId)}`;
     window.open(url, '_blank', 'width=600,height=700');
 }
 
