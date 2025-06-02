@@ -868,6 +868,37 @@ async def mark_complet(festival_id: int, request: Request):
                 return {"ok": True}
     return {"error": "Mot-clé incorrect"}
 
+@app.put("/api/trajets/{festival_id}/reopen")
+async def reopen_trajet(festival_id: int, request: Request):
+    data = await request.json()
+    trajet_id = data.get("trajet_id")
+    secret = data.get("secret")
+    
+    if not trajet_id or not secret:
+        return {"error": "Données manquantes"}
+    
+    with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
+        trajets = json.load(f)
+        # Trouver le trajet par son ID
+        for i, trajet in enumerate(trajets):
+            if str(trajet.get("id")) == str(trajet_id) and trajet.get("festival_id") == festival_id:
+                if trajet.get("secret") == secret:
+                    # Réinitialiser le statut complet et remettre des places disponibles si nécessaire
+                    trajet["complet"] = False
+                    # Si le nombre de places disponibles est à 0, on le remet à 1
+                    if trajet.get("places_disponibles", 0) <= 0:
+                        trajet["places_disponibles"] = 1
+                    
+                    # Sauvegarder les modifications
+                    f.seek(0)
+                    f.truncate()
+                    json.dump(trajets, f, ensure_ascii=False, indent=4)
+                    return {"ok": True, "message": "Le trajet est à nouveau disponible"}
+                else:
+                    return {"error": "Mot-clé incorrect"}
+    
+    return {"error": "Trajet non trouvé ou vous n'avez pas les droits nécessaires"}
+
 @app.post("/api/trajets/{festival_id}/delete")
 async def delete_trajet(festival_id: int, request: Request):
     data = await request.json()
