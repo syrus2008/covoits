@@ -621,14 +621,12 @@ async def add_trajet(request: Request):
                 error_msg = f"Champ manquant: {field}"
                 print(error_msg)
                 return JSONResponse(status_code=400, content={"error": error_msg})
-                return
                 
         # Validation du format de l'email
         if not isinstance(new_trajet["contact"], str) or "@" not in new_trajet["contact"] or "." not in new_trajet["contact"]:
             error_msg = "Format d'email invalide"
             print(error_msg)
             return JSONResponse(status_code=400, content={"error": error_msg})
-            return
             
         # Validation du format du téléphone (format international: +33612345678)
         import re
@@ -637,7 +635,6 @@ async def add_trajet(request: Request):
             error_msg = "Format de téléphone invalide. Utilisez le format international (ex: +33612345678)"
             print(error_msg)
             return JSONResponse(status_code=400, content={"error": error_msg})
-            return
                 
         # Validation de la date du trajet
         try:
@@ -646,14 +643,12 @@ async def add_trajet(request: Request):
             error_msg = "Format de date invalide. Utilisez le format YYYY-MM-DD"
             print(f"{error_msg}: {str(e)}")
             return JSONResponse(status_code=400, content={"error": error_msg})
-        return
         
         # Validation des tableaux de données
         if not isinstance(new_trajet["adresses"], list) or len(new_trajet["adresses"]) < 2:
             error_msg = "Au moins deux adresses sont nécessaires (départ et arrivée)"
             print(error_msg)
             return JSONResponse(status_code=400, content={"error": error_msg})
-        return
         
         if (not isinstance(new_trajet["heures"], list) or 
             not isinstance(new_trajet["places_par_arret"], list) or
@@ -662,7 +657,6 @@ async def add_trajet(request: Request):
             error_msg = "Les tableaux d'adresses, d'heures et de places doivent avoir la même longueur"
             print(error_msg)
             return JSONResponse(status_code=400, content={"error": error_msg})
-        return
         
         # Ajout d'un ID unique au trajet
         new_trajet["id"] = str(uuid.uuid4())
@@ -673,38 +667,36 @@ async def add_trajet(request: Request):
         # Ajout de l'ID du conducteur (généré de manière aléatoire)
         new_trajet["conducteur_id"] = str(uuid.uuid4())
         
+        # Utiliser un chemin absolu pour le fichier de trajets
+        trajets_file = os.path.join(os.getcwd(), "trajets.json")
+        
         # S'assurer que le fichier existe et est valide
-        os.makedirs(os.path.dirname(TRAJETS_FILE), exist_ok=True)
-        if not os.path.exists(TRAJETS_FILE):
-            with open(TRAJETS_FILE, 'w', encoding='utf-8') as f:
+        os.makedirs(os.path.dirname(trajets_file), exist_ok=True)
+        if not os.path.exists(trajets_file):
+            with open(trajets_file, 'w', encoding='utf-8') as f:
                 json.dump([], f)
         
         # Lecture et mise à jour du fichier des trajets
         try:
-            with open(TRAJETS_FILE, "r+", encoding="utf-8") as f:
-                try:
+            # Lire les trajets existants
+            try:
+                with open(trajets_file, 'r', encoding='utf-8') as f:
                     trajets = json.load(f)
-                    if not isinstance(trajets, list):
-                        trajets = []
-                except json.JSONDecodeError:
-                    print("Fichier de trajets corrompu, initialisation d'une nouvelle liste")
+                if not isinstance(trajets, list):
                     trajets = []
-                    
-                trajets.append(new_trajet)
-                
-                # Écrire dans un fichier temporaire d'abord
-                temp_file = TRAJETS_FILE + ".tmp"
-                with open(temp_file, 'w', encoding='utf-8') as f_temp:
-                    json.dump(trajets, f_temp, ensure_ascii=False, indent=4, default=str)
-                
-                # Remplacer l'ancien fichier par le nouveau
-                if os.name == 'nt':  # Windows
-                    os.replace(temp_file, TRAJETS_FILE)
-                else:  # Unix/Linux
-                    os.rename(temp_file, TRAJETS_FILE)
-                
-                print(f"Trajet ajouté avec succès. ID: {new_trajet['id']}")
-                return JSONResponse(status_code=200, content={"message": "Trajet ajouté avec succès", "id": new_trajet["id"]})
+            except (json.JSONDecodeError, FileNotFoundError):
+                print("Fichier de trajets corrompu ou introuvable, initialisation d'une nouvelle liste")
+                trajets = []
+            
+            # Ajouter le nouveau trajet
+            trajets.append(new_trajet)
+            
+            # Écrire dans le fichier
+            with open(trajets_file, 'w', encoding='utf-8') as f:
+                json.dump(trajets, f, ensure_ascii=False, indent=4, default=str)
+            
+            print(f"Trajet ajouté avec succès. ID: {new_trajet['id']}")
+            return JSONResponse(status_code=200, content={"message": "Trajet ajouté avec succès", "id": new_trajet["id"]})
             
         except Exception as e:
             error_msg = f"Erreur lors de l'écriture du fichier: {str(e)}"
@@ -715,7 +707,6 @@ async def add_trajet(request: Request):
         error_msg = "Format de données JSON invalide"
         print(error_msg)
         return JSONResponse(status_code=400, content={"error": error_msg})
-        return
         
     except Exception as e:
         error_msg = f"Erreur inattendue: {str(e)}"
