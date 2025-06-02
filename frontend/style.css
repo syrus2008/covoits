@@ -53,7 +53,6 @@
     padding: 0 20px !important;
     box-sizing: border-box !important;
     display: block !important;
-    border: 3px solid green !important;
     overflow: visible !important; /* Permettre le débordement si nécessaire */
 }
 
@@ -506,7 +505,6 @@ h1::after {
     margin: 0 0 2rem 0 !important;
     padding: 0 !important;
     box-sizing: border-box !important;
-    border: 2px dashed orange !important;
 }
 
 .festivals-section h2 {
@@ -527,17 +525,14 @@ h1::after {
     padding: 1rem !important;
     box-sizing: border-box !important;
     background-color: rgba(0, 0, 255, 0.1) !important;
-    border: 1px solid blue !important;
     position: relative !important;
 }
 
 /* Ajout d'un pseudo-élément pour afficher le numéro de la carte */
 .festival-card::before {
-    content: attr(data-index);
     position: absolute;
     top: 0;
     right: 0;
-    background: red;
     color: white;
     font-size: 12px;
     padding: 2px 5px;
