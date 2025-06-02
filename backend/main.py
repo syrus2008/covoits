@@ -721,6 +721,7 @@ async def get_trajets(festival_id: str):
                     "prix": trajet.get("prix", 0),
                     "commentaires": trajet.get("commentaires", ""),
                     "contact": trajet.get("contact", ""),
+                    "contact_email": trajet.get("contact_email", ""),
                     "date_creation": trajet.get("date_creation", ""),
                     "complet": trajet.get("complet", False)
                 }
