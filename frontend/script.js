@@ -581,7 +581,8 @@ async function loadTrajets(festival_id) {
                         </div>
                         ${isComplet ? `
                         <button class="btn btn-sm btn-success" 
-                                onclick="event.preventDefault(); showSecretForm('${trajet.id}', 'reopen')">
+                                onclick="event.preventDefault(); showSecretForm('${trajet.id}', 'reopen')"
+                                style="margin-right: 5px;">
                             <i class="fas fa-redo"></i> Rendre disponible
                         </button>` : `
                         <button class="btn btn-sm btn-primary" 
