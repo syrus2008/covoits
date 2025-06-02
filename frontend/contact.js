@@ -56,11 +56,25 @@ document.addEventListener('DOMContentLoaded', async function() {
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
+        // Récupérer le bouton et les éléments d'état
+        const submitButton = document.getElementById('submitButton');
+        const buttonText = document.getElementById('buttonText');
+        const buttonSpinner = document.getElementById('buttonSpinner');
+        
+        // Désactiver le bouton et afficher le spinner
+        submitButton.disabled = true;
+        buttonText.style.display = 'none';
+        buttonSpinner.style.display = 'inline-block';
+        
         const placesDemandees = parseInt(form.places.value);
         
         // Vérifier à nouveau le nombre de places disponibles
         if (placesDemandees > placesDisponibles) {
             alert(`Désolé, il ne reste que ${placesDisponibles} place(s) disponible(s).`);
+            // Réactiver le bouton en cas d'erreur
+            submitButton.disabled = false;
+            buttonText.style.display = 'inline-block';
+            buttonSpinner.style.display = 'none';
             return;
         }
         
@@ -83,14 +97,30 @@ document.addEventListener('DOMContentLoaded', async function() {
             });
             
             if (response.ok) {
+                // Si la requête réussit, cacher le formulaire et afficher le message de succès
                 form.style.display = 'none';
                 successMessage.style.display = 'block';
             } else {
-                alert('Une erreur est survenue. Veuillez réessayer.');
+                // En cas d'erreur, réactiver le bouton
+                submitButton.disabled = false;
+                buttonText.style.display = 'inline-block';
+                buttonSpinner.style.display = 'none';
+                
+                // Afficher un message d'erreur plus détaillé si possible
+                try {
+                    const errorData = await response.json();
+                    alert(errorData.detail || 'Une erreur est survenue. Veuillez réessayer.');
+                } catch (e) {
+                    alert('Une erreur est survenue. Veuillez réessayer.');
+                }
             }
         } catch (error) {
             console.error('Erreur:', error);
-            alert('Une erreur est survenue. Veuillez réessayer.');
+            // En cas d'erreur réseau, réactiver le bouton
+            submitButton.disabled = false;
+            buttonText.style.display = 'inline-block';
+            buttonSpinner.style.display = 'none';
+            alert('Une erreur est survenue. Veuillez vérifier votre connexion et réessayer.');
         }
     });
 });

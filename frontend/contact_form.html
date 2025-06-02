@@ -41,7 +41,12 @@
                 </div>
                 
                 <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Envoyer la demande</button>
+                    <button type="submit" id="submitButton" class="btn btn-primary">
+                        <span id="buttonText">Envoyer la demande</span>
+                        <span id="buttonSpinner" class="spinner" style="display: none;">
+                            <i class="fas fa-spinner fa-spin"></i> Envoi en cours...
+                        </span>
+                    </button>
                 </div>
             </form>
             

@@ -2259,3 +2259,43 @@ nav ul li a:hover {
 .pulse {
     animation: pulse 2s infinite;
 }
+
+/* Styles pour le bouton de soumission et l'indicateur de chargement */
+.btn-primary {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:disabled {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.8;
+}
+
+.spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.spinner i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Style pour le texte du bouton */
+#buttonText {
+    display: inline-block;
+}
+
+/* Style pour le spinner de chargement */
+#buttonSpinner {
+    display: none;
+}
