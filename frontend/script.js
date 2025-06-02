@@ -308,26 +308,7 @@ async function loadTrajets(festival_id) {
                 <div class="no-results">
                     <i class="fas fa-car-side"></i>
                     <p>Aucun trajet disponible pour le moment</p>
-                    <button class="btn btn-primary" id="show-trajet-form">
-                        <i class="fas fa-plus"></i> Proposer un trajet
-                    </button>
                 </div>`;
-            
-            // Ajouter l'événement pour afficher le formulaire
-            const showFormBtn = document.getElementById('show-trajet-form');
-            if (showFormBtn) {
-                showFormBtn.addEventListener('click', () => {
-                    const formContainer = document.getElementById('trajet-form-container');
-                    if (formContainer) {
-                        formContainer.style.display = 'block';
-                        showFormBtn.style.display = 'none';
-                        window.scrollTo({
-                            top: formContainer.offsetTop - 20,
-                            behavior: 'smooth'
-                        });
-                    }
-                });
-            }
             return;
         }
 
@@ -337,9 +318,6 @@ async function loadTrajets(festival_id) {
         let html = `
             <div class="trajets-header">
                 <h3>Trajets disponibles</h3>
-                <button class="btn btn-primary" id="show-trajet-form">
-                    <i class="fas fa-plus"></i> Proposer un trajet
-                </button>
             </div>
             <div class="trajets-list">
         `;
@@ -351,6 +329,7 @@ async function loadTrajets(festival_id) {
             
             html += `
                 <div class="trajet-card ${isComplet ? 'complet' : ''}" data-index="${index}" data-trajet-id="${trajet.id}">
+                    <input type="hidden" id="secret-${trajet.id}" value="${trajet.secret || ''}">
                     <div class="trajet-header">
                         <div class="trajet-type">
                             <i class="fas ${iconType}"></i>
@@ -393,13 +372,13 @@ async function loadTrajets(festival_id) {
                                     <i class="fas fa-envelope"></i> Contacter
                                 </button>
                                 <button class="btn btn-sm ${isComplet ? 'btn-secondary' : 'btn-success'}" 
-                                        onclick="markComplet(${festival_id}, '${trajet.id}')" 
+                                        onclick="event.preventDefault(); markComplet(${festival_id}, '${trajet.id}')" 
                                         ${isComplet ? 'disabled' : ''}>
                                     <i class="fas fa-${isComplet ? 'check' : 'check-double'}"></i>
                                     ${isComplet ? 'Complet' : 'Marquer complet'}
                                 </button>
                                 <button class="btn btn-sm btn-danger" 
-                                        onclick="deleteTrajet(${festival_id}, '${trajet.id}')">
+                                        onclick="event.preventDefault(); deleteTrajet(${festival_id}, '${trajet.id}')">
                                     <i class="fas fa-trash"></i>
                                     Supprimer
                                 </button>
@@ -523,24 +502,52 @@ function contacterConducteur(contact) {
     }
 }
 
-async function markComplet(festival_id, index) {
-    const secret = document.getElementById(`secret-${index}`).value;
-    await fetch(`/api/trajets/${festival_id}/complet`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-        body: JSON.stringify({ index, secret })
-    });
-    loadTrajets(festival_id);
+async function markComplet(festival_id, trajetId) {
+    try {
+        const secret = document.getElementById(`secret-${trajetId}`).value;
+        const response = await fetch(`/api/trajets/${festival_id}/complet`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ index: trajetId, secret })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+            showNotification(result.error, 'error');
+        } else {
+            showNotification('Trajet marqué comme complet avec succès', 'success');
+            loadTrajets(festival_id);
+        }
+    } catch (error) {
+        console.error('Erreur lors du marquage comme complet:', error);
+        showNotification('Une erreur est survenue', 'error');
+    }
 }
 
-async function deleteTrajet(festival_id, index) {
-    const secret = document.getElementById(`secret-${index}`).value;
-    await fetch(`/api/trajets/${festival_id}/delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
-        body: JSON.stringify({ index, secret })
-    });
-    loadTrajets(festival_id);
+async function deleteTrajet(festival_id, trajetId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce trajet ? Cette action est irréversible.')) {
+        return;
+    }
+    
+    try {
+        const secret = document.getElementById(`secret-${trajetId}`).value;
+        const response = await fetch(`/api/trajets/${festival_id}/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+            body: JSON.stringify({ index: trajetId, secret })
+        });
+        
+        const result = await response.json();
+        if (result.error) {
+            showNotification(result.error, 'error');
+        } else {
+            showNotification('Trajet supprimé avec succès', 'success');
+            loadTrajets(festival_id);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la suppression du trajet:', error);
+        showNotification('Une erreur est survenue lors de la suppression', 'error');
+    }
 }
 
 // Fonction pour ajouter un arrêt intermédiaire
@@ -599,10 +606,102 @@ function setupTrajetForm() {
         ajouterArretBtn.addEventListener('click', ajouterArretIntermediaire);
     }
 
+    // Charger les détails du festival pour la date
+    async function loadFestivalDetails() {
+        const festivalId = new URLSearchParams(window.location.search).get('id');
+        if (!festivalId) {
+            showNotification('Erreur: Aucun festival sélectionné', 'error');
+            return null;
+        }
+
+        try {
+            const response = await fetch(`/api/festivals/${festivalId}`);
+            if (!response.ok) throw new Error('Erreur lors du chargement des détails du festival');
+            return await response.json();
+        } catch (error) {
+            console.error('Erreur:', error);
+            showNotification('Impossible de charger les détails du festival', 'error');
+            return null;
+        }
+    }
+
+    // Initialiser le formulaire avec les dates du festival
+    async function initializeForm() {
+        const festival = await loadFestivalDetails();
+        if (!festival) return;
+
+        // Mettre à jour l'ID du festival dans le formulaire
+        document.getElementById('festival-id').value = festival.id;
+
+        // Définir les dates min/max pour le champ de date
+        const dateInput = document.getElementById('trajet-date');
+        const festivalDate = new Date(festival.date);
+        const today = new Date();
+        
+        // Si le festival est aujourd'hui ou dans le futur
+        if (festivalDate >= today) {
+            // Pour les trajets aller, la date doit être avant ou égale à la date du festival
+            // Pour les retours, après ou égale à la date du festival
+            dateInput.min = formatDateForInput(festivalDate);
+            dateInput.max = formatDateForInput(new Date(festivalDate.getTime() + 7 * 24 * 60 * 60 * 1000)); // Jusqu'à 7 jours après
+        } else {
+            // Pour les festivals passés, permettre des dates autour de la date du festival
+            const dayAfter = new Date(festivalDate);
+            dayAfter.setDate(dayAfter.getDate() + 1);
+            dateInput.min = formatDateForInput(new Date(festivalDate.getTime() - 7 * 24 * 60 * 60 * 1000));
+            dateInput.max = formatDateForInput(dayAfter);
+        }
+
+        // Définir la date par défaut
+        const trajetType = document.querySelector('input[name="trajet_type"]:checked').value;
+        if (trajetType === 'aller') {
+            dateInput.value = formatDateForInput(festivalDate);
+        } else {
+            const nextDay = new Date(festivalDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            dateInput.value = formatDateForInput(nextDay);
+        }
+    }
+
+    // Formater la date pour l'input date (YYYY-MM-DD)
+    function formatDateForInput(date) {
+        const d = new Date(date);
+        let month = '' + (d.getMonth() + 1);
+        let day = '' + d.getDate();
+        const year = d.getFullYear();
+
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+
+        return [year, month, day].join('-');
+    }
+
+    // Mettre à jour la date minimale/maximale lors du changement de type de trajet
+    document.querySelectorAll('input[name="trajet_type"]').forEach(radio => {
+        radio.addEventListener('change', async () => {
+            const festival = await loadFestivalDetails();
+            if (!festival) return;
+            
+            const festivalDate = new Date(festival.date);
+            const dateInput = document.getElementById('trajet-date');
+            
+            if (radio.value === 'aller') {
+                dateInput.value = formatDateForInput(festivalDate);
+            } else {
+                const nextDay = new Date(festivalDate);
+                nextDay.setDate(nextDay.getDate() + 1);
+                dateInput.value = formatDateForInput(nextDay);
+            }
+        });
+    });
+
+    // Initialiser le formulaire
+    initializeForm();
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const festivalId = new URLSearchParams(window.location.search).get('id');
+        const festivalId = document.getElementById('festival-id').value;
         if (!festivalId) {
             showNotification('Erreur: Aucun festival sélectionné', 'error');
             return;
@@ -662,7 +761,7 @@ function setupTrajetForm() {
                 heures: heures,
                 places_par_arret: placesParArret,
                 places_disponibles: Math.min(...placesParArret), // Le nombre de places disponibles est le minimum des places par arrêt
-                prix: parseFloat(document.getElementById('prix').value) || 0,
+                date_trajet: document.getElementById('trajet-date').value,
                 commentaires: document.getElementById('commentaires').value,
                 contact: document.getElementById('contact').value,
                 secret: document.getElementById('secret').value,

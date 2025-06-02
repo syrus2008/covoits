@@ -224,10 +224,16 @@ async def add_trajet(request: Request):
     new_trajet = await request.json()
     
     # Validation des champs requis
-    required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "secret"]
+    required_fields = ["festival_id", "type", "adresses", "heures", "places_par_arret", "places_disponibles", "contact", "secret", "date_trajet"]
     for field in required_fields:
         if field not in new_trajet:
             return {"error": f"Champ manquant: {field}"}, 400
+            
+    # Validation de la date du trajet
+    try:
+        trajet_date = datetime.strptime(new_trajet["date_trajet"], "%Y-%m-%d")
+    except (ValueError, TypeError):
+        return {"error": "Format de date invalide. Utilisez le format YYYY-MM-DD"}, 400
     
     # Validation des tableaux de données
     if len(new_trajet["adresses"]) < 2:
@@ -239,6 +245,8 @@ async def add_trajet(request: Request):
     # Ajout d'un ID unique au trajet
     new_trajet["id"] = str(uuid.uuid4())
     new_trajet["date_creation"] = datetime.now().isoformat()
+    # S'assurer que la date est au bon format
+    new_trajet["date_trajet"] = trajet_date.isoformat()
     
     # Lecture et mise à jour du fichier des trajets
     try:

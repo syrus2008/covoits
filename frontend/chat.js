@@ -8,12 +8,8 @@ const chatUsername = document.getElementById('chat-username');
 if (!chatMessages || !chatForm || !chatInput) {
     console.error('Éléments du chat introuvables dans le DOM');
 } else {
-    // Récupérer ou générer un nom d'utilisateur unique
-    let username = localStorage.getItem('chatUsername');
-    if (!username) {
-        username = `User-${Math.floor(Math.random() * 10000)}`;
-        localStorage.setItem('chatUsername', username);
-    }
+    // Récupérer le nom d'utilisateur depuis le stockage local
+    let username = localStorage.getItem('chatUsername') || '';
     
     // Mettre à jour le champ du nom d'utilisateur
     if (chatUsername) {
@@ -141,13 +137,44 @@ if (!chatMessages || !chatForm || !chatInput) {
     // Démarrer la connexion WebSocket
     connectWebSocket();
     
+    // Liste des termes interdits dans les noms d'utilisateur
+    const forbiddenUsernames = [
+        'admin', 'administrateur', 'modo', 'moderator', 'modérateur', 'sysadmin',
+        'root', 'system', 'server', 'bot', 'staff', 'support', 'help', 'service',
+        'assistance', 'webmaster', 'modération', 'moderacion', 'moderazione',
+        'moderator', 'moderatore', 'админ', 'модератор', '管理员', '管理者',
+        '운영자', '관리자', '管理者', 'モデレーター'
+    ];
+    
+    // Vérifier si un nom d'utilisateur contient des termes interdits
+    function isUsernameForbidden(username) {
+        if (!username) return false;
+        const lowerUsername = username.toLowerCase();
+        return forbiddenUsernames.some(term => 
+            lowerUsername.includes(term) || 
+            lowerUsername === term ||
+            lowerUsername.startsWith(term + '_') ||
+            lowerUsername.endsWith('_' + term) ||
+            lowerUsername.includes('_' + term + '_')
+        );
+    }
+    
     // Fonction pour mettre à jour le nom d'utilisateur
     function updateUsername() {
         const newUsername = chatUsername.value.trim();
-        if (newUsername && newUsername !== username) {
+        if (!newUsername) return;
+        
+        if (isUsernameForbidden(newUsername)) {
+            showChatStatus('Ce nom d\'utilisateur n\'est pas autorisé', 'error');
+            // Réinitialiser à l'ancien nom
+            chatUsername.value = username;
+            return;
+        }
+        
+        if (newUsername !== username) {
             username = newUsername;
             localStorage.setItem('chatUsername', username);
-            // Ne pas envoyer de message système ici pour éviter les messages en double
+            showChatStatus('Nom d\'utilisateur mis à jour', 'success');
         }
     }
     
@@ -162,6 +189,11 @@ if (!chatMessages || !chatForm || !chatInput) {
         if (chatUsername) {
             const newUsername = chatUsername.value.trim();
             if (newUsername && newUsername !== username) {
+                if (isUsernameForbidden(newUsername)) {
+                    showChatStatus('Ce nom d\'utilisateur n\'est pas autorisé', 'error');
+                    chatUsername.value = username; // Réinitialiser à l'ancien nom
+                    return;
+                }
                 username = newUsername;
                 localStorage.setItem('chatUsername', username);
             }
