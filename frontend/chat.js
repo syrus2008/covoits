@@ -8,6 +8,19 @@ const chatUsername = document.getElementById('chat-username');
 if (!chatMessages || !chatForm || !chatInput) {
     console.error('Éléments du chat introuvables dans le DOM');
 } else {
+    // Récupérer ou générer un nom d'utilisateur unique
+    let username = localStorage.getItem('chatUsername');
+    if (!username) {
+        username = `User-${Math.floor(Math.random() * 10000)}`;
+        localStorage.setItem('chatUsername', username);
+    }
+    
+    // Mettre à jour le champ du nom d'utilisateur
+    if (chatUsername) {
+        chatUsername.value = username;
+        // Mettre à jour le nom d'utilisateur lorsqu'il est modifié
+        chatUsername.addEventListener('change', updateUsername);
+    }
     // Fonction pour ajouter un message au chat de manière sécurisée
     function addMessage(username, message, timestamp) {
         if (!chatMessages) return;
@@ -58,16 +71,35 @@ if (!chatMessages || !chatForm || !chatInput) {
                 console.log('Connecté au chat');
                 reconnectAttempts = 0; // Réinitialiser le compteur de reconnexion
                 showChatStatus('Connecté', 'success');
+                
+                // Envoyer le nom d'utilisateur actuel au serveur
+                if (socket.readyState === WebSocket.OPEN) {
+                    socket.send(JSON.stringify({
+                        username: username,
+                        type: 'set_username'
+                    }));
+                }
             };
             
             socket.onmessage = (event) => {
                 try {
-                    const message = JSON.parse(event.data);
-                    if (message && typeof message === 'object') {
-                        addMessage(message.username, message.text, message.timestamp);
+                    const data = JSON.parse(event.data);
+                    
+                    // Gérer les différents types de messages
+                    if (data.type === 'history') {
+                        // Charger l'historique des messages
+                        if (Array.isArray(data.messages)) {
+                            chatMessages.innerHTML = ''; // Vider les messages actuels
+                            data.messages.forEach(msg => {
+                                addMessage(msg.username, msg.text, msg.timestamp);
+                            });
+                        }
+                    } else if (data.type === 'message' || (data.username && data.text)) {
+                        // Afficher un nouveau message
+                        addMessage(data.username, data.text, data.timestamp);
                     }
                 } catch (e) {
-                    console.error('Erreur lors du traitement du message:', e);
+                    console.error('Erreur lors du traitement du message:', e, event.data);
                 }
             };
             
@@ -100,40 +132,40 @@ if (!chatMessages || !chatForm || !chatInput) {
     // Démarrer la connexion WebSocket
     connectWebSocket();
     
-    // Récupérer ou initialiser le nom d'utilisateur
-    if (chatUsername) {
-        // Récupérer le nom d'utilisateur depuis le stockage local s'il existe
-        const savedUsername = localStorage.getItem('chatUsername');
-        if (savedUsername) {
-            chatUsername.value = savedUsername;
+    // Fonction pour mettre à jour le nom d'utilisateur
+    function updateUsername() {
+        const newUsername = chatUsername.value.trim();
+        if (newUsername && newUsername !== username) {
+            username = newUsername;
+            localStorage.setItem('chatUsername', username);
+            // Envoyer un message système pour informer du changement de nom
+            addMessage('Système', `${username} a rejoint la conversation`, new Date().toISOString());
         }
-        
-        // Sauvegarder le nom d'utilisateur lorsqu'il est modifié
-        chatUsername.addEventListener('change', () => {
-            if (chatUsername.value.trim()) {
-                localStorage.setItem('chatUsername', chatUsername.value.trim());
-            }
-        });
     }
     
     // Envoi d'un message
     chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
         
-        const username = (chatUsername && chatUsername.value) ? chatUsername.value.trim() : 'Anonyme';
         const message = chatInput ? chatInput.value.trim() : '';
         
-        // Sauvegarder le nom d'utilisateur dans le stockage local
-        if (username && username !== 'Anonyme') {
-            localStorage.setItem('chatUsername', username);
+        // Mettre à jour le nom d'utilisateur si modifié
+        if (chatUsername) {
+            const newUsername = chatUsername.value.trim();
+            if (newUsername && newUsername !== username) {
+                username = newUsername;
+                localStorage.setItem('chatUsername', username);
+            }
         }
         
-        if (message && socket && socket.readyState === WebSocket.OPEN) {
+        if (!message) return;
+        
+        if (socket && socket.readyState === WebSocket.OPEN) {
             try {
                 const chatMessage = {
+                    type: 'message',
                     username: username.substring(0, 30), // Limiter la longueur du nom d'utilisateur
-                    text: message.substring(0, 500), // Limiter la longueur du message
-                    timestamp: new Date().toISOString()
+                    text: message.substring(0, 500) // Limiter la longueur du message
                 };
                 
                 socket.send(JSON.stringify(chatMessage));
